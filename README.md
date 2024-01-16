@@ -10,11 +10,11 @@ Follow these steps to contribute to the repository:
    Click on the "Fork" button at the top right corner of this page. This creates a copy of the repository in your GitHub account.
 
 2. **Clone Your Fork:**
-   Clone the repository to your local machine using the following command:
+   Clone the repository to your local machine using the following command:\
    `$ git clone https://github.com/YourUsername/IITP_Robocon2024.git`
 
 3. **Create a New Branch:**
-   Create a new branch for your changes. Use a descriptive branch name:
+   Create a new branch for your changes. Use a descriptive branch name:\
    `git checkout -b contrib`
 
 4. **Add Your Files:**
@@ -22,12 +22,12 @@ Follow these steps to contribute to the repository:
 
 5. **Commit Your Changes:**
    Commit your changes with a meaningful commit message:
-   `git add .`
-   `git commit -m "Add your-file-name"`
+   `$ git add .`
+   `$ git commit -m "Add your-file-name"`
 
 6. **Push to Your Fork:**
-   Push your changes to your forked repository on GitHub:
-   `git push origin contrib`
+   Push your changes to your forked repository on GitHub:\
+   `$ git push origin contrib`
 
 7. **Create a Pull Request:**
    Go to the original repository on GitHub and click on "New Pull Request." Compare and submit your changes for review.
