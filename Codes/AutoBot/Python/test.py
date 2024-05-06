@@ -1,4 +1,4 @@
-from Utils import BallDetector
+from Utils import BallDetector, SiloDetector
 import cv2
 import time
 
@@ -166,6 +166,17 @@ def siloConfigBypass(ballDetectorObject):
     ballDetectorObject.eraseMemory()
     ballDetectorObject.upperSpeed()
 
+def siloDetect_checkpoint1():
+        while True:
+            silo_detector=SiloDetector("Resource/best.pt")
+            ret, frame = cap.read()
+            if not ret:
+                print("Error: Couldn't capture a frame.")
+            else:
+                silo_detector.detectSilo(frame)
+                cv2.imshow("Hi", frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
 if __name__== '__main__':
     ballFollow_checkPoint2()
