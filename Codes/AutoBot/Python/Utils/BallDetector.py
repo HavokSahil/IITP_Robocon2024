@@ -3,6 +3,8 @@ import serial
 import math
 import cv2
 
+# This Portion was written by Sahil
+
 class BallDetector:
     def __init__(self, filename, imgsz=640, conf=0.45, iou=0.45, xCenter=320, yCenter=480):
         self._model = self._loadModel(filename)
@@ -206,3 +208,172 @@ class BallDetector:
             bool: True if the camera is focused on an aligned position, False otherwise.
         """
         return 200 <= x <= 440 and 200 <= y <= 460
+        
+ 
+ # This portion is written by Satyam Bhaiya
+ 
+'''silostate = [
+    [1, 0, 0],
+    [1, -1, 0],
+    [0, 0, 0],
+    [0, 0, 0],
+    [0, 0, 0]
+]
+'''
+
+blue, red, emp = 1, -1, 0
+
+# priority_map is a dictionary that maps tuples representing the state of a silo (blue, red, empty) to their respective priorities.
+
+priority_map = {
+    (blue, red, emp): 1,        # Priority 1 for blue followed by red then empty
+    (red, blue, emp): 2,        # Priority 2 for red followed by blue then empty
+    (blue, blue, emp): 3,       # Priority 3 for two blue balls followed by empty
+    (red, red, emp): 4,         # Priority 4 for two red balls followed by empty
+    (emp, emp, emp): 5,         # Priority 5 for all empty silos
+    (blue, emp, emp): 6,        # Priority 6 for blue followed by empty then empty
+    (red, emp, emp): 7          # Priority 7 for red followed by empty then empty
+}
+
+
+class SiloDetector(BallDetector):
+    def __init__(self, filename, imgsz=640, conf=0.45, iou=0.45, xCenter=320, yCenter=480):
+        """Initializes SiloDetector object with given parameters."""
+        super().__init__(filename, imgsz, conf, iou, xCenter, yCenter)
+        self._model = self._loadModel(filename)
+        self._imgsz = imgsz
+        self._conf = conf
+        self._iou = iou
+        self.xCenter = xCenter
+        self.yCenter = yCenter
+        self.lastPos = None
+        self.serialObj = None
+        self.clutch = False
+
+    def predict(self, silo):
+        """Predicts the optimal silo to place a ball based on priority map."""
+        order = []
+        
+        # Calculate priorities
+        for row in silo:
+            priority = priority_map.get(tuple(row), 1000)
+            print(row)
+            order.append(priority)
+        
+        print(len(order))
+        # Find the min priority number and silo number
+        if(len(order) > 0):
+            min_priority = min(order)
+            silo_number = order.index(min_priority) 
+            return silo_number
+        
+        else:
+            return 0
+
+    def detectSilo(self, frame):
+        """Detects silos and balls in the frame and determines the optimal silo for a ball."""
+        silolist = list()
+        blueballlist = list()
+        redballlist = list()
+        # Make predictions with the YOLOv8 model
+        class_names = self._model.names
+        results = self._model.predict(frame, imgsz=640, conf=0.40, iou=0.45)
+        results = results[0]
+        print(results)
+
+        # Draw bounding boxes on the frame and display info
+        for i, box in enumerate(results.boxes):
+            tensor = box.xyxy[0]
+            x1, y1, x2, y2 = int(tensor[0].item()), int(tensor[1].item()), int(tensor[2].item()), int(tensor[3].item())
+
+            # Calculate center coordinates
+            center_x, center_y = (x1 + x2) // 2, (y1 + y2) // 2
+
+            # Get class index, name, and confidence
+            class_index = int(box.cls[0].item())
+            class_label = class_names[class_index] if 0 <= class_index < len(class_names) else f"Class {class_index + 1}"
+            confidence = round(float(box.conf[0].item()), 2)
+
+            # Display info in the frame
+            # SILOS IS PURPLE
+            if(class_index == 2):
+                info_text = f"Object {i + 1}: {class_label} - Confidence: {confidence}\n Center: ({center_x}, {center_y})"
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 255), 3)
+                cv2.putText(frame, info_text, (x1, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                # Adding box
+                box = list()
+                box.extend([x1, y1, x2, y2])
+                silolist.append(box)
+
+            elif(class_index == 1):
+                info_text = f"Object {i + 1}: {class_label} - Confidence: {confidence}\n Center: ({center_x}, {center_y})"
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 3)
+                cv2.putText(frame, info_text, (x1, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+                ball = list()
+                ball.extend([center_x, center_y])
+                redballlist.append(ball)
+
+            elif(class_index == 0):
+                info_text = f"Object {i + 1}: {class_label} - Confidence: {confidence}\n Center: ({center_x}, {center_y})"
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 3)
+                cv2.putText(frame, info_text, (x1, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
+                ball = list()
+                ball.extend([center_x, center_y])
+                blueballlist.append(ball)
+
+        final_result = list()
+
+        # Check each silo with each ball
+        # FORMAT: SILO NUMBER , NO OF RED BALLS, NO OF BLUE BALLS
+        for i in range(0, len(silolist)):
+            new_record = list([i, 0, 0])
+            final_result.append(new_record)
+            for j in range(0, len(redballlist)):
+                if(redballlist[j][0] > silolist[i][0] and redballlist[j][0] < silolist[i][2] and redballlist[j][1] > silolist[i][1] and redballlist[j][1] < silolist[i][3]):
+                    final_result[i][1] += 1
+                
+            for j in range(0, len(blueballlist)):
+                if(blueballlist[j][0] > silolist[i][0] and blueballlist[j][0] < silolist[i][2] and blueballlist[j][1] > silolist[i][1] and blueballlist[j][1] < silolist[i][3]):
+                    final_result[i][2] += 1
+
+        final_data = list()
+        for i in final_result:
+            rec = list()
+            k = 0
+            # ADD RED BALLS
+            for j in range(i[1]):
+                rec.append(-1)
+                k += 1
+            for j in range(i[2]):
+                rec.append(1)
+                k += 1
+            for j in range(3 - k):
+                rec.append(0)
+            final_data.append(rec)
+
+        silo_id = self.predict(final_data)
+        print("SILO ID", silo_id)
+        # Print pos
+        cx = 0
+        cy = 0
+        if(len(silolist) > 0):
+            cx = (silolist[silo_id][0] + silolist[silo_id][2]) / 2
+            cy = (silolist[silo_id][0] + silolist[silo_id][2]) / 2
+            print(silo_id, "::", cx, ",", cy)
+        
+            if(cx < 200):
+                print("RIGHT")
+
+            elif(cy > 400):
+                print("LEFT")
+        
+            else:
+                print("STRAIGHT")
+
+        # Display the frame
+        cv2.imshow('YOLOv8 Webcam Inference', frame)
+
+    @staticmethod
+    def _loadModel(filename):
+        """Loads the YOLOv8 model from the given filename."""
+        return BallDetector._loadModel(filename)
