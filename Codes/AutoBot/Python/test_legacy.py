@@ -1,8 +1,8 @@
-from Utils import BallDetector, SiloDetector
+from Utils import BallDetector
 import cv2
 import time
 
-cap = cv2.VideoCapture(3)
+cap = cv2.VideoCapture(0)
 
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -15,7 +15,7 @@ if not cap.isOpened():
 def serialTest_checkpoint0():
     filename="Resource/ball.pt"
     ballDetectorObject = BallDetector.BallDetector(filename)
-    ballDetectorObject.initialiseSerial('/dev/ttyUSB0', 115200)
+    ballDetectorObject.initialiseSerial('/dev/ttyUSB1', 115200)
 
     while True:
         val = str(input("Enter character: "))
@@ -166,19 +166,8 @@ def siloConfigBypass(ballDetectorObject):
     ballDetectorObject.eraseMemory()
     ballDetectorObject.upperSpeed()
 
-def siloDetect_checkpoint1():
-        while True:
-            silo_detector=SiloDetector("Resource/best.pt")
-            ret, frame = cap.read()
-            if not ret:
-                print("Error: Couldn't capture a frame.")
-            else:
-                silo_detector.detectSilo(frame)
-                cv2.imshow("Hi", frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
 
 if __name__== '__main__':
-    ballFollow_checkPoint2()
+    serialTest_checkpoint0()
     cap.release()
     cv2.destroyAllWindows()
