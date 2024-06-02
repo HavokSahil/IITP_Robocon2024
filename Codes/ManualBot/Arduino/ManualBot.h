@@ -10,7 +10,6 @@
 #define TRIGGER_PNEUMATIC 'r'
 #define TRIGGER_GRAB_POS 'g'
 #define TRIGGER_GRAB_NEG 'l'
-#define TRIGGER_STOP 'e'
 
 class ManualBot {
   public:
