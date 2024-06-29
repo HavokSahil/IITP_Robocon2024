@@ -47,23 +47,29 @@ class Driver:
 
     def rotClock(self):
         if not self.clutch:
-            self.sendCommandToSerial('d')
+            self.sendCommandToSerial('l')
 
     def rotAClock(self):
         if not self.clutch:
-            self.sendCommandToSerial('a')
+            self.sendCommandToSerial('k')
 
     def cameraUp(self):
-        self.sendCommandToSerial('s')
+        self.sendCommandToSerial('v')
 
     def cameraDown(self):
         self.sendCommandToSerial('b')
 
+    def gripperUp(self):
+        self.sendCommandToSerial('u')
+    
+    def gripperDown(self):
+        self.sendCommandToSerial('p')
+
     def triggerGripper(self):
-        self.sendCommandToSerial('g')
+        self.sendCommandToSerial('c')
 
     def triggerRelease(self):
-        self.sendCommandToSerial('h')
+        self.sendCommandToSerial('o')
 
     def stop(self):
         self.sendCommandToSerial('x')
@@ -72,7 +78,7 @@ class Driver:
         self.sendCommandToSerial('l')
 
     def upperSpeed(self):
-        self.sendCommandToSerial('u')
+        self.sendCommandToSerial('U')
 
     def setClutch(self, value):
         self.clutch = value
