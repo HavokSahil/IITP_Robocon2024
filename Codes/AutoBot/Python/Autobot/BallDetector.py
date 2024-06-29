@@ -3,6 +3,15 @@ import cv2
 from .Detector import Detector
 
 class BallDetector(Detector):
+
+    MISSING_LEFT = 0
+    MISSING_RIGHT = 1
+    MISSING_UNKNOWN = 2
+    MISSING_BELOW = 3
+    CENTER = 4
+    LEFT = 5
+    RIGHT = 6
+
     def __init__(self, filename, imgsz=640, conf=0.45, iou=0.45, xCenter=320, yCenter=480):
         super().__init__(filename, imgsz, conf, iou, xCenter, yCenter)
         self.lastPos = None
@@ -40,11 +49,11 @@ class BallDetector(Detector):
         if self.lastPos:
             if self.lastPos[0] in range(160, 480):
                 if self.lastPos[1] in range(240, 480):
-                    missingClass = "MISSING_BELOW"
+                    missingClass = BallDetector.MISSING_BELOW
             elif self.lastPos[0] <= 160:
-                missingClass = "MISSING_LEFT"
+                missingClass = BallDetector.MISSING_LEFT
             elif self.lastPos[0] >= 480:
-                missingClass = "MISSING_RIGHT"
+                missingClass = BallDetector.MISSING_RIGHT
         return missingClass
 
     def classifyBallPresence(self, x, y):
@@ -64,11 +73,11 @@ class BallDetector(Detector):
         f2 = 7*y+24*x-12480
 
         if (f1<0 and f2<0):
-            return "CENTRE"
+            return BallDetector.CENTER
         elif (f1<0 and f2>0):
-            return "RIGHT"
+            return BallDetector.RIGHT
         else:
-            return "LEFT"
+            return BallDetector.LEFT
         
     def eraseMemory(self):
         """
