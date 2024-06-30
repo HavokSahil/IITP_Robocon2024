@@ -5,9 +5,10 @@ import cv2
 class SiloDetector(Detector):
 
     # Class Variables
-    SILO, RED_BALL, BLUE_BALL = 2, 1, 0 # Class Index For Classification
     BLUE, RED, EMP = 1, -1, 0           # Encoded Constants
-    priority_map = {
+    
+    #Blue priority map
+    priority_map_blue = {
         (BLUE, RED, EMP): 1,            # Priority 1 for BLUE followed by RED then EMPty
         (RED, BLUE, EMP): 2,            # Priority 2 for RED followed by BLUE then EMPty
         (BLUE, BLUE, EMP): 3,           # Priority 3 for two BLUE balls followed by EMPty
@@ -17,88 +18,25 @@ class SiloDetector(Detector):
         (RED, EMP, EMP): 7              # Priority 7 for RED followed by EMPty then EMPty
     }
 
-    def __init__(self, filename, imgsz=640, conf=0.45, iou=0.45, xCenter=320, yCenter=480):
-        super().__init__(filename, imgsz, conf, iou, xCenter, yCenter)
+    priority_map_red = {
+        (RED, BLUE, EMP): 1,            # Priority 1 for BLUE followed by RED then EMPty
+        (BLUE, RED, EMP): 2,            # Priority 2 for RED followed by BLUE then EMPty
+        (RED, RED, EMP): 3,           # Priority 3 for two BLUE balls followed by EMPty
+        (BLUE, BLUE, EMP): 4,             # Priority 4 for two RED balls followed by EMPty
+        (EMP, EMP, EMP): 5,             # Priority 5 for all EMPty silos
+        (RED, EMP, EMP): 6,            # Priority 6 for BLUE followed by EMPty then EMPty
+        (BLUE, EMP, EMP): 7              # Priority 7 for RED followed by EMPty then EMPty
+    }
+    def __init__(self, filename, imgsz=640, conf=0.45, iou=0.45, xCenter=320, yCenter=480,team=1):
+        super().__init__(filename, imgsz, conf, iou, xCenter, yCenter,)
+        self.team = team
+        self.priority_map = list()
+        if(self.team == 1):
+            self.priority_map = SiloDetector.priority_map_blue
+        #ELSE IF RED
+        if(self.team == -1):
+            self.priority_map = SiloDetector.priority_map_red
 
-    
-    def predictOptimal(self, silo):
-        """
-        Assigns the Optimal Choice based on Priority Map
-
-        Args:
-           silo (List): A list of states of silo.
-        
-        Returns:
-            Int: Index of chosen silo
-        """
-        order = []
-        for row in silo:
-            priority = SiloDetector.priority_map.get(tuple(row), 1000)
-            self.logMessage(row)
-            order.append(priority)
-
-        self.logMessage(len(order))
-
-        # Find the min priority number and silo number
-        if (len(order)>0):
-            min_priority = min(order)
-            silo_number = order.index(min_priority)
-            return silo_number
-    
-        else: return 0
-
-    
-    def detectSiloState(self, frame):
-        """
-        Detect silos in frame and Calculate its State
-
-        Args:
-            frame(Mat): OpenCV frame
-        
-        Returns:
-            Tuple: A tuple of lists of (Silo, Blue Balls, Red Balls)
-        """
-        siloList, blueList, redList = list(), list(), list()
-
-        class_names = self._model.names
-        result = self._model.predict(frame, imgsz=self._imgsz, conf=self._conf, iou=self._iou)[0]
-
-        self.logMessage(str(result))
-
-        for i, box in enumerate(result.boxes):
-            tensor = box.xyxy[0]
-            x1, y1, x2, y2 = int(tensor[0].item()), int(tensor[1].item()), int(tensor[2].item()), int(tensor[3].item())
-            center_x, center_y = (x1 + x2)//2, (y1 + y2)//2
-
-            class_index = int(box.cls[0].item())
-            class_label = class_names[class_index] if (0<=class_index<len(class_names)) else f"Class {class_index + 1}"
-            confidence = round(float(box.conf[0].item()), 2)
-
-            if (class_index == SiloDetector.SILO):
-                info_text = f"Object {i + 1}: {class_label} - Confidence: {confidence}\n Center: ({center_x}, {center_y})"
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 255), 3)
-                cv2.putText(frame, info_text, (x1, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-                box = list()
-                box.extend([x1, y1, x2, y2])
-                siloList.append(box)
-
-            elif (class_index == SiloDetector.RED):
-                info_text = f"Object {i + 1}: {class_label} - Confidence: {confidence}\n Center: ({center_x}, {center_y})"
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 3)
-                cv2.putText(frame, info_text, (x1, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
-                ball = list()
-                ball.extend([center_x, center_y])
-                redList.append(ball)
-            
-            elif (class_index == SiloDetector.BLUE):
-                info_text = f"Object {i + 1}: {class_label} - Confidence: {confidence}\n Center: ({center_x}, {center_y})"
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 3)
-                cv2.putText(frame, info_text, (x1, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 2)
-                ball = list()
-                ball.extend([center_x, center_y])
-                blueList.append(ball)
-
-        return siloList, blueList, redList
 
 
     def getLocOptimalSilo(self, frame):
@@ -107,27 +45,130 @@ class SiloDetector(Detector):
 
         Returns:
             Tuple: (x, y) The coordinate of centre of the best silo.
+            (-1,-1) if no silo
         """
-        siloList, blueList, redList = self.detectSiloState(frame)
-    
+        self.updateDetection(frame)
+        #Reset silostate
+        self.silostate = list()
+        
+        #Changing depending on team
+        #IF BLUE
+        
+
+
+        #For every silos
+        for silo in self.silos:
+
+            #Count number of red balls in the silo and the number of blue balls in the silo (Actual order does not matter)
+            redballcount = 0
+            blueballcount = 0
+
+            #Now checking every red ball
+            for ball in self.red_balls:
+                #Getting the ball centre
+                centre_x = (ball[0]+ball[2])//2
+                centre_y = (ball[1]+ball[3])//2
+                
+                #Getting the silo centre
+                x1 = silo[0]
+                y1 = silo[1]
+                x2 = silo[2]
+                y2 = silo[3]
+
+                #Now checking if the ball is inside the silo
+                if(centre_x>x1 and centre_x<x2 and centre_y>y1 and centre_y<y2):
+                    redballcount+=1
+
+            #Now checking every blue ball
+            for ball in self.blue_balls:
+                #Getting the ball centre
+                centre_x = (ball[0]+ball[2])//2
+                centre_y = (ball[1]+ball[3])//2
+                
+                #Getting the silo centre
+                x1 = silo[0]
+                y1 = silo[1]
+                x2 = silo[2]
+                y2 = silo[3]
+
+                #Now checking if the ball is inside the silo
+                if(centre_x>x1 and centre_x<x2 and centre_y>y1 and centre_y<y2):
+                    blueballcount+=1
+
+
+            #Create a new silo
+            new_silo = list()
+            #Adding the red balls
+            for i in range(0,redballcount):
+                new_silo.append(SiloDetector.RED)
+
+            #Adding the blue balls
+            for i in range(0,blueballcount):
+                new_silo.append(SiloDetector.BLUE)
+
+            self.silostate.append(new_silo)            
+
+            print(self.silostate)#For debugginh
+
+
+        #Find the best silo
+        order = []
+            
+            
+        # Calculate priorities
+        for row in self.silostate:
+            priority = self.priority_map.get(tuple(row), 1000)
+            order.append(priority)
+
+            # Find the min priority number and silo number
+        if(len(order)>0):
+            min_priority = min(order)
+            silo_number = order.index(min_priority) 
+        
+            
+            cx = (self.silos[silo_number][0]+self.silos[silo_number][2])/2
+            cy = (self.silos[silo_number][1]+self.silos[silo_number][3])/2
+
+            return (cx,cy)
+
+        else:
+            self.best_silo = -1
+            return(-1,-1)
+
+        
+        '''#Reset reading
+        self.updateDetection(frame)
+        
+        #Creating a new silostate
         final_result = list()
-        for i in range(0, len(siloList)):
+        for i in range(0, len(self.silos)):
             new_record = list([i, 0, 0])
             final_result.append(new_record)
 
-            for j in range(0, len(redList)):
-                if(redList[j][0] > siloList[i][0] and
-                    redList[j][0] < siloList[i][2] and
-                    redList[j][1] > siloList[i][1] and
-                    redList[j][1] < siloList[i][3]):
+            for j in range(0, len(self.red_balls)):
+                #Centre of ball 
+                #x co-ordinate
+                bx = (self.red_balls[j][0]+self.red_balls[j][0])/2
+                #y-co-ordinate
+                by = (self.red_balls[j][0]+self.red_balls[j][0])/2
+
+                if( bx > self.silos[i][0] and
+                    bx < self.silos[i][2] and
+                    by > self.silos[i][1] and
+                    by < self.silos[i][3]):
                     
                     final_result[i][1] += 1
                 
-            for j in range(0, len(blueList)):
-                if(blueList[j][0] > siloList[i][0] and 
-                    blueList[j][0] < siloList[i][2] and 
-                    blueList[j][1] > siloList[i][1] and 
-                    blueList[j][1] < siloList[i][3]):
+            for j in range(0, len(self.blue_balls)):
+                #Centre of ball 
+                #x co-ordinate
+                bx = (self.red_balls[j][0]+self.red_balls[j][0])/2
+                #y-co-ordinate
+                by = (self.red_balls[j][0]+self.red_balls[j][0])/2
+                if(bx > self.silos[i][0] and 
+                    bx < self.silos[i][2] and 
+                    by > self.silos[i][1] and 
+                    by < self.silos[i][3]):
                     
                     final_result[i][2] += 1
 
@@ -150,11 +191,12 @@ class SiloDetector(Detector):
         silo_id = self.predictOptimal(final_data)
 
         cx, cy = 0, 0
-        if (len(siloList)>0):
-            cx = (siloList[silo_id][0] + siloList[silo_id][2]) / 2
-            cy = (siloList[silo_id][0] + siloList[silo_id][2]) / 2
+        if (len(self.silos)>0):
+            cx = (self.silos[silo_id][0] + self.silos[silo_id][2]) / 2
+            cy = (self.silos[silo_id][1] + self.silos[silo_id][3]) / 2
             self.logMessage(f"{silo_id}: ({cx}, {cy})")
 
-            return cx, cy
+            return (cx, cy)
         
         return None
+        '''
