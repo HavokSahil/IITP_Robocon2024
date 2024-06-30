@@ -89,7 +89,7 @@ class Detector:
             cv2.rectangle(frame,[i[0],i[1]],[i[2],i[3]],(255,0,0),5)
         for i in self.red_balls:
             cv2.rectangle(frame,[i[0],i[1]],[i[2],i[3]],(0,0,255),5)
-        for i in self.blue_balls:
+        for i in self.silos:
             cv2.rectangle(frame,[i[0],i[1]],[i[2],i[3]],(0,255,0),5)
 
     def setEcho(self, value):
