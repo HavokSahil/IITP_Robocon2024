@@ -4,6 +4,7 @@ from .Detector import Detector
 
 class BallDetector(Detector):
 
+    #Codes to define where the ball is missing
     MISSING_LEFT = 0
     MISSING_RIGHT = 1
     MISSING_UNKNOWN = 2
@@ -12,31 +13,72 @@ class BallDetector(Detector):
     LEFT = 5
     RIGHT = 6
 
-    def __init__(self, filename, imgsz=640, conf=0.45, iou=0.45, xCenter=320, yCenter=480):
+    #Our team
+    BLUE_TEAM  = 1
+    RED_TEAM = -1
+
+
+    #Initialization 
+    def __init__(self, filename, imgsz=640, conf=0.45, iou=0.45, xCenter=320, yCenter=480,team = 1):
         super().__init__(filename, imgsz, conf, iou, xCenter, yCenter)
         self.lastPos = None
+        self.team = team
 
+
+    #Get prediction will give us the largest class
     def getPrediction(self, frame):
         """
-        Predicts the position of the ball in the given frame.
+        Predicts the position of the closest ball in the screen
 
         Returns:
-            Tuple: (count, [x, y], frame[annotated])
+            [x, y] if ball is present
+            [-1.-1] if no ball is present
         """
         
-        result = self._model.predict(frame, imgsz=self._imgsz, conf=self._conf, iou=self._iou)[0]
-        count = len(result)
-        if count == 0:
-            return 0, None, frame
+        #Update the predictions
+        self.updateDetection(frame)
+        
+
+        #Use list of blue balls if we are in the blue team, else use red balls
+        balls = list()
+        if(self.team == BallDetector.BLUE_TEAM):
+            balls = self.blue_balls
         else:
-            i = 0
-            box = result.boxes[i]
-            tensor = box.xyxy[0]
-            x1, y1, x2, y2 = int(tensor[0].item()), int(tensor[1].item()), int(tensor[2].item()), int(tensor[3].item())
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 255), 3)
-            center_x, center_y = (x1 + x2) // 2, (y1 + y2) // 2
-            self.lastPos = [center_x, center_y]
-            return count, [center_x, center_y], frame
+            balls = self.red_balls
+
+        #If balls are present
+        if(len(balls)>0):
+            area = 0
+
+            closest = [-1,-1,-1,-1]
+            #Find the largest ball (using area) and return that
+            for i in balls:
+                new_area = abs(i[0]-i[2])*abs(i[1]-i[3])
+                
+                #Find the ball with the largest area
+                if(new_area>area):
+                    closest = i
+                    area = new_area
+                
+            #Find new centres
+            centre_x = (closest[0]+closest[2])/2
+            centre_y = (closest[1]+closest[3])/2
+
+
+            #Update the last position
+            
+            #If ball found
+         
+            self.lastPos = [centre_x,centre_y]
+            #Return the new centers
+            return [centre_x,centre_y]
+        
+        #If no ball is found
+        else:
+            return [-1,-1]
+
+
+
 
     def classifyMissingBall(self):
         """
