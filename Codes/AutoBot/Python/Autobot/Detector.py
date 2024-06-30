@@ -4,37 +4,93 @@ import math
 import logging
 
 class Detector:
+    # Class Variables
+    SILO, RED_BALL, BLUE_BALL = 2, 1, 0 # Class Index For Classification
+    #Initializing 
     def __init__(self, filename, imgsz=640, conf=0.45, iou=0.45, xCenter=320, yCenter=480):
-        self._model = self._loadModel(filename)
+        #Creating a model
+        self._model = YOLO(filename)
+        #Getting class names if it is required later
+        self.class_names = self._model.names
+
+
+        #Setting hyperparameters
         self._imgsz = imgsz
         self._conf = conf
         self._iou = iou
         self.xCenter = xCenter
         self.yCenter = yCenter
+        
 
+        #Logging used for debugging
         self.echo = False
         self._logger = self.initialiseLogger()
 
+        #Create 3 silo states for predicting silos, red balls and blue balls
+        self.silos = list()
+        self.red_balls = list()
+        self.blue_balls = list()
 
-    def getPrediction(self, frame):
-        """
-        Predicts the position of the OOI(Object of Interest) in the given frame.
+    def updateDetection(self,frame):
+        #Reading from the frame
+    
 
-        Returns:
-            Tuple: (count, [x, y], frame[annotated])
-        """
-        result = self._model.predict(frame, imgsz=self._imgsz, conf=self._conf, iou=self._iou)[0]
-        count = len(result)
-        if count == 0:
-            return 0, None, None
-        else:
-            i = 0
-            box = result.boxes[i]
+        #Refresing predictions
+        self.silos = list()
+        self.red_balls = list()
+        self.blue_balls = list()
+
+        #Now we create the result of our predictions
+        results = self._model.predict(frame, imgsz=640, conf=0.2, iou=0.45)
+        results = results[0]
+
+        #Now for every detected ball
+        for i,box in enumerate(results.boxes):
             tensor = box.xyxy[0]
+            #Getting the bounding box
             x1, y1, x2, y2 = int(tensor[0].item()), int(tensor[1].item()), int(tensor[2].item()), int(tensor[3].item())
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 255), 3)
-            center_x, center_y = (x1 + x2) // 2, (y1 + y2) // 2
-            return count, [center_x, center_y], frame
+        
+            # Calculate center coordinates
+            #center_x, center_y = (x1 + x2) // 2, (y1 + y2) // 2
+           
+            # Get class index, name, and confidence
+            class_index = int(box.cls[0].item())
+
+            #Calculating them just in case they are required later
+            class_label = self.class_names[class_index] if 0 <= class_index < len(self.class_names) else f"Class {class_index + 1}"
+            confidence = round(float(box.conf[0].item()), 2)
+
+            #Now we are updating the various lists
+             #IF IT IS A SILO   
+            if(class_index==Detector.SILO):#SILO
+                
+            
+                #Adding box
+                box = list()
+                box.extend([x1,y1,x2,y2])
+                self.silos.append(box)
+                    
+            #If it is a red ball
+            elif(class_index==Detector.RED_BALL):
+                
+                ball = list()
+                ball.extend([x1,y1,x2,y2])
+                self.red_balls.append(ball)
+
+            #If it is a blue ball
+            elif(class_index==Detector.BLUE_BALL):
+                ball = list()
+                ball.extend([x1,y1,x2,y2])
+                self.blue_balls.append(ball)
+    def highlightFrame(self,frame):
+
+        #Highlight every item from the list
+        for i in self.blue_balls:
+            cv2.rectangle(frame,[i[0],i[1]],[i[2],i[3]],(255,0,0),5)
+        for i in self.red_balls:
+            cv2.rectangle(frame,[i[0],i[1]],[i[2],i[3]],(0,0,255),5)
+        for i in self.blue_balls:
+            cv2.rectangle(frame,[i[0],i[1]],[i[2],i[3]],(0,255,0),5)
 
     def setEcho(self, value):
         """
@@ -96,18 +152,7 @@ class Detector:
         """
         return radius * 1000 + angle
     
-    @staticmethod
-    def _loadModel(filename):
-        """
-        Loads the YOLO model.
-
-        Args:
-            filename (str): Path to the YOLO model file.
-
-        Returns:
-            YOLO: Loaded YOLO model.
-        """
-        return YOLO(filename)
+   
 
     @staticmethod
     def focusAligned(x, y):
