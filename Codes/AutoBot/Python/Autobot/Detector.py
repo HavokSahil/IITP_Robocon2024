@@ -5,7 +5,20 @@ import logging
 
 class Detector:
     # Class Variables
+    MISSING_LEFT = 7
+    MISSING_RIGHT = 8
+    MISSING_UNKNOWN = 9
+    MISSING_BELOW = 10
+
+    CENTER = 4
+    LEFT = 5
+    RIGHT = 6
     SILO, RED_BALL, BLUE_BALL = 2, 1, 0 # Class Index For Classification
+
+    #Our team
+    BLUE_TEAM = 1
+    RED_TEAM  = -1
+
     #Initializing 
     def __init__(self, filename, imgsz=640, conf=0.45, iou=0.45, xCenter=320, yCenter=480):
         #Creating a model
@@ -71,17 +84,18 @@ class Detector:
                 self.silos.append(box)
                     
             #If it is a red ball
-            elif(class_index==Detector.RED_BALL):
+            elif(class_index == Detector.RED_BALL):
                 
                 ball = list()
                 ball.extend([x1,y1,x2,y2])
                 self.red_balls.append(ball)
 
             #If it is a blue ball
-            elif(class_index==Detector.BLUE_BALL):
+            elif(class_index == Detector.BLUE_BALL):
                 ball = list()
                 ball.extend([x1,y1,x2,y2])
                 self.blue_balls.append(ball)
+
     def highlightFrame(self,frame):
 
         #Highlight every item from the list
@@ -167,6 +181,30 @@ class Detector:
             bool: True if the camera is focused on an aligned position, False otherwise.
         """
         return 200 <= x <= 440 and 200 <= y <= 460
+    
+    @staticmethod
+    def classifyPresence(x, y):
+        """
+        Classifies the position of the object based on its coordinates.
+
+        Args:
+            x (int): X-coordinate of the object.
+            y (int): Y-coordinate of the object.
+
+        Returns:
+            str: State of the object (CENTRE, RIGHT, LEFT).
+        """
+
+        # Check if the point lies inside the trapezium
+        f1 = 7*y-24*x+2880
+        f2 = 7*y+24*x-12480
+
+        if (f1<0 and f2<0):
+            return Detector.CENTER
+        elif (f1<0 and f2>0):
+            return Detector.RIGHT
+        else:
+            return Detector.LEFT
 
     @staticmethod
     def initialiseLogger():
