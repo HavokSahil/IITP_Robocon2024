@@ -28,6 +28,8 @@ class BallDetector(Detector):
     #Get prediction will give us the largest class
     def getPrediction(self, frame):
         """
+        
+        Remember to update predictions before using this
         Predicts the position of the closest ball in the screen
 
         Returns:
@@ -35,8 +37,6 @@ class BallDetector(Detector):
             [-1.-1] if no ball is present
         """
         
-        #Update the predictions
-        self.updateDetection(frame)
         
 
         #Use list of blue balls if we are in the blue team, else use red balls
@@ -98,7 +98,8 @@ class BallDetector(Detector):
                 missingClass = BallDetector.MISSING_RIGHT
         return missingClass
 
-    def classifyBallPresence(self, x, y):
+    @staticmethod
+    def classifyBallPresence(x, y):
         """
         Classifies the position of the ball based on its coordinates.
 

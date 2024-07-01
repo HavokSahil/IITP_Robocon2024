@@ -1,4 +1,5 @@
 import serial
+import time
 
 class Driver:
     def __init__(self):
@@ -19,6 +20,7 @@ class Driver:
         """
         try:
             self.serialObj = serial.Serial(address, baudrate)
+    
         except Exception as e:
             raise Exception("Failed to initialize serial communication: " + str(e))
     
@@ -35,7 +37,10 @@ class Driver:
         """
         if self.serialObj:
             try:
+                start = time.time()
                 self.serialObj.write(str(command).encode("utf-8"))
+                end = time.time()
+                print("The Time is: ",end-start)
             except Exception as e:
                 raise Exception("Failed to send command via serial: " + str(e))
 
