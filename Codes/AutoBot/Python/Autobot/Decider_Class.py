@@ -29,7 +29,7 @@ class Decider:
                 driver.stop()
             elif(loc_val == BallDetector.LEFT):
                 print("Ball is close and in the left")
-                driver.rotAClock()
+                driver.rotClock()
             elif(loc_val == BallDetector.RIGHT):
                 print("Ball is close and in the right")
                 driver.rotClock()
