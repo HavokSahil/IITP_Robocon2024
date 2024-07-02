@@ -50,6 +50,9 @@ class PID:
         #Update the last_update time
         self.last_update = time_now()
 
+        #Update previous error
+        self.prev_error = error
+
     #Get the PID value
     def getPID(self):
         ''' Args:- Nothing(Must be updated before for it to work properly)
