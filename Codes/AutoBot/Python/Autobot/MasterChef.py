@@ -7,10 +7,8 @@ class MasterChef:
 
 
     #Written in hexadecimal because we like overcomplicating simple things
-    BALL_SEARCH = 0x0
     BALL_FOLLOW = 0x1
     BALL_FOCUS  = 0x2
-    SILO_SEARCH = 0x3
     SILO_FOLLOW = 0x4
     
     CREDIT_ON = 0x5
@@ -43,6 +41,7 @@ class MasterChef:
     #The ultimate tool to make the masterchef obey us
     def forceMaster(self, order):
         self.mode = order
+        self.earnCredit()
 
     #This function get's the current mode... like the header says
     def getMode(self):

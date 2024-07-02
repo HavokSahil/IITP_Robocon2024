@@ -80,7 +80,7 @@ class Driver:
         self.sendCommandToSerial('x')
 
     def lowerSpeed(self):
-        self.sendCommandToSerial('l')
+        self.sendCommandToSerial('L')
 
     def upperSpeed(self):
         self.sendCommandToSerial('U')
