@@ -65,17 +65,17 @@ class Driver:
         self.sendCommandToSerial('b')
 
     def gripperUp(self):
-        self.sendCommandToSerial('u')
+        self.sendCommandToSerial('U')
     
     def gripperDown(self):
-        self.sendCommandToSerial('p')
+        self.sendCommandToSerial('P')
 
     def triggerGripper(self):
-        self.sendCommandToSerial('c')
+        self.sendCommandToSerial('C')
         
 
     def triggerRelease(self):
-        self.sendCommandToSerial('o')
+        self.sendCommandToSerial('O')
 
     def stop(self):
         self.sendCommandToSerial('x')

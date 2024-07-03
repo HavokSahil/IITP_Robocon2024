@@ -23,7 +23,7 @@ class Decider:
         if(close_ball[0]>0):
             #Find the location
             loc_val = BallDetector.classifyPresence(close_ball[0],close_ball[1])
-
+            """
             # if the ball is already in focused range then poke the masterchef to change mode to silo search
             if (Detector.focusAligned(close_ball[0], close_ball[1])):
                 print("Focus Aligned: Now Poking MasterChef")
@@ -32,8 +32,9 @@ class Decider:
                     masterChef.spendCredit()
                     driver.triggerGripper()
                     driver.gripperUp()
+                    """
 
-            elif(loc_val == BallDetector.CENTER):
+            if(loc_val == BallDetector.CENTER):
                 print("Ball is close and in the centre")
                 driver.stop()
                 masterChef.poke(MasterChef.BALL_FOCUS)
@@ -71,10 +72,10 @@ class Decider:
 
     def ballFocusmode(close_frame, close_ball_detector, driver, masterChef):
 
-        count, pos, close_frame = close_ball_detector.getPrediction(close_frame)
+        pos = close_ball_detector.getPrediction(close_frame)
 
-        if (count == 0):
-            masterChef.poke(MasterChef.BALL_FOCUS)
+        if (pos[0] < 0):
+            masterChef.poke(MasterChef.BALLL_FOLLOW)
 
         else:
 
@@ -82,29 +83,35 @@ class Decider:
 
             match presenceStatus:
                     case BallDetector.CENTER:
-                        driver.stop()
-                        driver.triggerRelese()
-                        driver.gripperDown()
-                        if close_ball_detector.focusAligned(pos[0],pos[1]):
-                            driver.triggerGripper()
-                            driver.gripperUp()
-                        else:
-                            driver.lower()
-                            driver.moveForward()
+                       if masterChef.isCreditAvailable():
+                           driver.stop()
+                           driver.triggerRelease()
+                           driver.gripperDown()
+                           if close_ball_detector.focusAligned(pos[0],pos[1]):
+                               driver.triggerGripper()
+                               driver.gripperUp()
+                               driver.stop()
+                               masterChef.spendCredit()
+                               
+                           else:
+                                driver.lower()
+                                driver.moveForward()
                         
-                        """
-                        if driver.triggerGripper():
+                           """
+                            if driver.triggerGripper():
                             driver.gripperUp()
-                        else:
+                            else:
                             while not driver.triggerGripper:
                                 driver.lowerSpeed()
                                 driver.moveForward()
-                                driver.triggerGripper()"""
+                                driver.triggerGripper()
+                    """
                                 
                     case BallDetector.LEFT:
                         driver.rotAClock()
                     case BallDetector.RIGHT:
                         driver.rotClock()
+                        
         
         
     @staticmethod

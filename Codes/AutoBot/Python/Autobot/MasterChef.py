@@ -3,7 +3,7 @@
 class MasterChef:
 
     #The confidence threshold (Higher than the confidence of the average engineer,which lasts 13 frames :) )
-    CONF_THRES = 15
+    CONF_THRES = 10
 
 
     #Written in hexadecimal because we like overcomplicating simple things
