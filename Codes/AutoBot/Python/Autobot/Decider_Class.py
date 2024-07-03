@@ -21,23 +21,28 @@ class Decider:
         #If ball is close
         if(close_centre[0]>=0):
             print("CLOSE")
-            if(BallDetector.classifyBallPresence(close_centre[0],close_centre[1])!=BallDetector.CENTER):
-                pid_val = pid.run(far_centre[0])
-                abs_pid = abs(pid.run(far_centre[0]))
+            if(close_centre[0] <100 or close_centre[0]>540):
+                print("CENTER::::::::::::::::",close_centre[0])
+                pid_val = pid.run(close_centre[0])
+                abs_pid = abs(pid.run(close_centre[0]))
                 val = abs_pid/(abs_pid+40)
 
-                print(pid.getError(far_centre[0]),"::",abs_pid,"::",val**4)
+                print(pid.getError(close_centre[0]),"::",abs_pid,"::",val**4)
                 
         
                 if(pid_val<0):
-                    driver.rotClock()
-                else:
+                    print("CLOSE AND ATTEMPTING TO ROTATE ANTI CLOCK")
                     driver.rotAClock()
-            elif(close_centre[1]<300):
+                else:
+                    print("CLOSE AND ATTEMPTING TO ROTATE CLOCK")
+                    driver.rotClock()
+            #elif(close_centre[1]<300):
                 #Ball is in centre and close, STOP
-                driver.moveForward()
+                #driver.moveForward()
             else:
+                print("REACHED")
                 driver.stop()
+                #Change state using masterchef to focus
 
         #Calculate PID
         elif(far_centre[0]>=0):
@@ -49,12 +54,15 @@ class Decider:
 
                 print(pid.getError(far_centre[0]),"::",abs_pid,"::",val**4)
                 
-        
+               
                 if(pid_val<0):
-                    driver.rotClock()
-                else:
+                    print("FAR AND ATTEMPTING TO ROTATE ANTI CLOCK")
                     driver.rotAClock()
+                else:
+                    print("FAR AND ATTEMPTING TO ROTATE CLOCK")
+                    driver.rotClock()
             else:
+                print("MOVING FORWARD")
                 #Ball is in centre, go ahead
                 driver.moveForward()
             

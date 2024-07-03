@@ -19,7 +19,7 @@ class Driver:
             Exception: If serial communication fails to initialize.
         """
         try:
-            self.serialObj = serial.Serial(address, baudrate,write_timeout=0.1)
+            self.serialObj = serial.Serial(address, baudrate)
 
         except Exception as e:
             raise Exception("Failed to initialize serial communication: " + str(e))
@@ -38,7 +38,7 @@ class Driver:
         
         if self.serialObj:
             try:
-              
+                print(str(command))
                 self.serialObj.write(str(command).encode("utf-8"))
     
                
@@ -53,11 +53,11 @@ class Driver:
 
     def rotClock(self):
         if not self.clutch:
-            self.sendCommandToSerial('a')
+            self.sendCommandToSerial('l')
 
     def rotAClock(self):
         if not self.clutch:
-            self.sendCommandToSerial('d')
+            self.sendCommandToSerial('k')
 
     def cameraUp(self):
         self.sendCommandToSerial('v')
@@ -81,7 +81,7 @@ class Driver:
         self.sendCommandToSerial('x')
 
     def lowerSpeed(self):
-        self.sendCommandToSerial('l')
+        self.sendCommandToSerial('L')
 
     def upperSpeed(self):
         self.sendCommandToSerial('U')
@@ -90,5 +90,5 @@ class Driver:
         self.clutch = value
 
     def setRotSpeed(self,value):
-        message = "<0%d>".format(value)
+        message = "<0{}>".format(value)
         self.sendCommandToSerial(message)
