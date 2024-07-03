@@ -40,7 +40,7 @@ class Driver:
                 start = time.time()
                 self.serialObj.write(str(command).encode("utf-8"))
                 end = time.time()
-                print("The Time is: ",end-start)
+                print("The Time is: ",end-start, command)
             except Exception as e:
                 raise Exception("Failed to send command via serial: " + str(e))
 
@@ -88,3 +88,8 @@ class Driver:
 
     def setClutch(self, value):
         self.clutch = value
+
+    #Set rotational speed
+    def setRotSpeed(self,value):
+        message = "<0{}>".format(value)
+        self.sendCommandToSerial(message)

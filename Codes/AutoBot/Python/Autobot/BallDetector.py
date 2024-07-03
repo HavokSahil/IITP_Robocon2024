@@ -122,6 +122,15 @@ class BallDetector(Detector):
         else:
             return BallDetector.LEFT
         
+    @staticmethod
+    def classifyCloseBallPresence(x, y):
+        if (x<200):
+            return BallDetector.LEFT
+        elif (x>440):
+            return BallDetector.RIGHT
+        else:
+            return BallDetector.CENTER
+        
     def eraseMemory(self):
         """
         Remove the Last position of detection from memory

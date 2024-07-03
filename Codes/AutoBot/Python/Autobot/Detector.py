@@ -22,7 +22,7 @@ class Detector:
     #Initializing 
     def __init__(self, filename, imgsz=640, conf=0.45, iou=0.45, xCenter=320, yCenter=480):
         #Creating a model
-        self._model = YOLO(filename)
+        self._model = YOLO(filename,verbose=False)
         #Getting class names if it is required later
         self.class_names = self._model.names
 
@@ -180,7 +180,7 @@ class Detector:
         Returns:
             bool: True if the camera is focused on an aligned position, False otherwise.
         """
-        return 200 <= x <= 440 and 200 <= y <= 460
+        return 200 <= x <= 440 and 200 <= y <= 480
     
     @staticmethod
     def classifyPresence(x, y):

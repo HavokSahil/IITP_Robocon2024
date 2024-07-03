@@ -14,10 +14,13 @@ class Decider:
         #Far detector
         far_ball_detector.updateDetection(far_frame)
 
-
-
+        
+    
         #If no close balls
         close_ball = close_ball_detector.getPrediction(close_frame)
+
+        #Default speed
+        
 
         #If close ball exists (Position is (-1,-1))
         if(close_ball[0]>0):
@@ -33,7 +36,7 @@ class Decider:
                     driver.triggerGripper()
                     driver.gripperUp()
                     """
-
+         
             if(loc_val == BallDetector.CENTER):
                 print("Ball is close and in the centre")
                 driver.stop()
@@ -49,10 +52,14 @@ class Decider:
 
         else:
             far_ball = far_ball_detector.getPrediction(far_frame)
+            
+          
             if(far_ball[0]>0):    
                 #Find the location
                 loc_val = BallDetector.classifyPresence(far_ball[0],far_ball[1])
-                
+          
+ 
+
                 if(loc_val == BallDetector.CENTER):
                     print("Ball is far and in the centre")
                     driver.moveForward()
@@ -67,45 +74,44 @@ class Decider:
                     print("The ball is far, but location can't be determined")
             
             else:
+                
                 print("BALL CANT BE FOUND, ROTATE")
                 driver.rotClock()
 
     def ballFocusmode(close_frame, close_ball_detector, driver, masterChef):
+        close_ball_detector.updateDetection(close_frame)
+        
+        if (masterChef.isCreditAvailable()):
+            driver.triggerRelease()
+            driver.gripperDown()
+            masterChef.spendCredit()
 
         pos = close_ball_detector.getPrediction(close_frame)
 
+        print(pos)
         if (pos[0] < 0):
-            masterChef.poke(MasterChef.BALLL_FOLLOW)
+            masterChef.poke(MasterChef.BALL_FOLLOW)
 
         else:
 
-            presenceStatus = close_ball_detector.classifyBallPresence(pos[0], pos[1])
-
+            presenceStatus = close_ball_detector.classifyCloseBallPresence(pos[0], pos[1])
             match presenceStatus:
                     case BallDetector.CENTER:
-                       if masterChef.isCreditAvailable():
-                           driver.stop()
-                           driver.triggerRelease()
-                           driver.gripperDown()
-                           if close_ball_detector.focusAligned(pos[0],pos[1]):
-                               driver.triggerGripper()
-                               driver.gripperUp()
-                               driver.stop()
-                               masterChef.spendCredit()
-                               
-                           else:
-                                driver.lower()
-                                driver.moveForward()
-                        
-                           """
-                            if driver.triggerGripper():
-                            driver.gripperUp()
-                            else:
-                            while not driver.triggerGripper:
-                                driver.lowerSpeed()
-                                driver.moveForward()
+                        if close_ball_detector.focusAligned(pos[0],pos[1]):
+                            print("=\n"*50)
+                            masterChef.earnCredit()
+
+                            if masterChef.isCreditAvailable():
+                                driver.stop()
                                 driver.triggerGripper()
-                    """
+                                
+
+                                driver.gripperUp()
+                                masterChef.spendCredit()
+                            
+                        else:
+                            driver.moveForward()
+                        
                                 
                     case BallDetector.LEFT:
                         driver.rotAClock()
