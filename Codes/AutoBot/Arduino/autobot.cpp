@@ -1,12 +1,20 @@
-#include "esp32-hal.h"
-#include "esp32-hal-gpio.h"
-#include <math.h>
+#include "HardwareSerial.h"
+#include "Servo.h"
+#include <avr/interrupt.h>
 #include "autobot.h"
-#include <cmath>
-#include <ESP32Servo.h>
+#include <math.h>
 
-AutoBot::AutoBot(int pwmPin1, int dirPin1, int pwmPin2, int dirPin2, int pwmPin3, int dirPin3, int pwmPin4, int dirPin4, int rx, int tx, int camservo_pin, int gservo_pin, int stepperPulse, int stepperDir)
+AutoBot::AutoBot(
+  int pwmPin1, 
+  int dirPin1, 
+  int pwmPin2, 
+  int dirPin2, 
+  int pwmPin3, 
+  int dirPin3, 
+  int pwmPin4, 
+  int dirPin4)
 {
+
   pwmPins[0] = pwmPin1;
   dirPins[0] = dirPin1;
   pwmPins[1] = pwmPin2;
@@ -15,14 +23,9 @@ AutoBot::AutoBot(int pwmPin1, int dirPin1, int pwmPin2, int dirPin2, int pwmPin3
   dirPins[2] = dirPin3;
   pwmPins[3] = pwmPin4;
   dirPins[3] = dirPin4;
-  serialPins[0] = tx;
-  serialPins[1] = rx;
-  cServoPin = camservo_pin;
-  gServoPin = gservo_pin;
-  steppulse = stepperPulse;
-  stepdir = stepperDir;
 
-  state = 'x';
+  this->driveState = BOT_IDLE;
+  this->periState = PERI_IDLE;
 
   // Initialise motor speed coefficients to 1.0 (no modification)
   for (int i = 0; i < 4; ++i) motorSpeedCoefficients[i] = 1.0;
@@ -33,29 +36,31 @@ AutoBot::AutoBot(int pwmPin1, int dirPin1, int pwmPin2, int dirPin2, int pwmPin3
     pinMode(dirPins[i], OUTPUT);
   }
 
-  pinMode(steppulse,OUTPUT);
-  pinMode(stepdir,OUTPUT);
-
-  // setting up rx and tx pins
-  Serial2.begin(BAUD_RATE, SERIAL_8N1, rx, tx);
-
-  // set default operating speed to max speed
-  operatingSpeed = 40;
-  //default cam state
-  camMode=0;
-  gripperState=0;
+  this->OPERATING_SPEED = 20;
+  this->GRIPPER_STATE = GRIPPER_CLOSE;
+  this->CAMERA_STATE = CAMERA_POS_DOWN;
+  this->LIFTER_STATE = LIFTER_ACTIVE;
+  this->RANGE_STATE = OUT_RANGE_BALL;
 }
 
 AutoBot::~AutoBot() {
   //Destructor
 }
 
-void AutoBot::setState(char val) {
-  AutoBot::state = val;
+void AutoBot::setPeriState(char val) {
+  this->periState = val;
 }
 
-char AutoBot::getState() {
-  return AutoBot::state;
+void AutoBot::setDriveState(char val) {
+  this->driveState = val;
+}
+
+char AutoBot::getDriveState() {
+  return this->driveState;
+}
+
+char AutoBot::getPeriState() {
+  return this->periState;
 }
 
 void AutoBot::setWheelSpeeds(int motorSpeeds[]) {
@@ -81,205 +86,201 @@ void AutoBot::setWheelSpeeds(int motorSpeeds[]) {
 
 // =============== Additional Servo Functions
 
-void AutoBot::pick()
-{
-  if (gripperState == GRIPPER_INACTIVE)
-  {
-    for(int i=60;i>=20;i--)
-    {
-      Serial.println("pick");
-      gservo.write(i);
-      delay(20);
-    }
-    gripperState=GRIPPER_ACTIVE;
-  }
-}
-
-
-void AutoBot::drop()
-{
-  if (gripperState==GRIPPER_ACTIVE)
-  {
-    for(int i=20;i<=60;i++)
-    {
-      Serial.println("drop");
-      gservo.write(i);
-      delay(20);
-    }
-    gripperState=GRIPPER_INACTIVE;
-  }
-}
-
-void AutoBot::camRotdown()
-{
-  while(camMode==WATCH_MODE)
-  {
-    for(int i=120;i>=45;i--)
-    {
-      cservo.write(i);
-    }
-    camMode = FOCUS_MODE;
-  }
-}
-
-void AutoBot::camRotup()
-{
-  while(camMode==FOCUS_MODE)
-  {
-    for(int i=45;i<=120;i++)
-    {
-      cservo.write(i);
-    }
-    camMode = WATCH_MODE;
-  }
-}
-
 void AutoBot::rotCLK() {
   int motorSpeeds[4]=ROTATE_CLOCK;
-  motorSpeeds[0] *= motorSpeedCoefficients[0] * operatingSpeed;
-  motorSpeeds[1] *= motorSpeedCoefficients[1] * operatingSpeed;
-  motorSpeeds[2] *= motorSpeedCoefficients[2] * operatingSpeed;
-  motorSpeeds[3] *= motorSpeedCoefficients[3] * operatingSpeed;
-  AutoBot::setWheelSpeeds(motorSpeeds);
+  motorSpeeds[0] *= motorSpeedCoefficients[0] * this->OPERATING_SPEED;
+  motorSpeeds[1] *= motorSpeedCoefficients[1] * this->OPERATING_SPEED;
+  motorSpeeds[2] *= motorSpeedCoefficients[2] * this->OPERATING_SPEED;
+  motorSpeeds[3] *= motorSpeedCoefficients[3] * this->OPERATING_SPEED;
+  this->setWheelSpeeds(motorSpeeds);
 }
 
 void AutoBot::rotACLK() {
   int motorSpeeds[4] = ROTATE_ANTICLOCK;
-  motorSpeeds[0] *= motorSpeedCoefficients[0] * operatingSpeed;
-  motorSpeeds[1] *= motorSpeedCoefficients[1] * operatingSpeed;
-  motorSpeeds[2] *= motorSpeedCoefficients[2] * operatingSpeed;
-  motorSpeeds[3] *= motorSpeedCoefficients[3] * operatingSpeed;
-  AutoBot::setWheelSpeeds(motorSpeeds);
+  motorSpeeds[0] *= motorSpeedCoefficients[0] * this->OPERATING_SPEED;
+  motorSpeeds[1] *= motorSpeedCoefficients[1] * this->OPERATING_SPEED;
+  motorSpeeds[2] *= motorSpeedCoefficients[2] * this->OPERATING_SPEED;
+  motorSpeeds[3] *= motorSpeedCoefficients[3] * this->OPERATING_SPEED;
+  this->setWheelSpeeds(motorSpeeds);
 }
 
 void AutoBot::stop() {
   int motorSpeeds[4]=STOP;
-  AutoBot::setWheelSpeeds(motorSpeeds);
+  this->setWheelSpeeds(motorSpeeds);
 }
 
 void AutoBot::driveFRONT() {
   int motorSpeeds[4]=DRIVE_FRONT;
-  motorSpeeds[0] *= motorSpeedCoefficients[0] * operatingSpeed;
-  motorSpeeds[1] *= motorSpeedCoefficients[1] * operatingSpeed;
-  motorSpeeds[2] *= motorSpeedCoefficients[2] * operatingSpeed;
-  motorSpeeds[3] *= motorSpeedCoefficients[3] * operatingSpeed;
-  setWheelSpeeds(motorSpeeds);
+  motorSpeeds[0] *= motorSpeedCoefficients[0] * this->OPERATING_SPEED;
+  motorSpeeds[1] *= motorSpeedCoefficients[1] * this->OPERATING_SPEED;
+  motorSpeeds[2] *= motorSpeedCoefficients[2] * this->OPERATING_SPEED;
+  motorSpeeds[3] *= motorSpeedCoefficients[3] * this->OPERATING_SPEED;
+  this->setWheelSpeeds(motorSpeeds);
 }
 
 void AutoBot::driveLEFT() {
   int motorSpeeds[4]=DRIVE_LEFT;
-  motorSpeeds[0] *= motorSpeedCoefficients[0] * operatingSpeed;
-  motorSpeeds[1] *= motorSpeedCoefficients[1] * operatingSpeed;
-  motorSpeeds[2] *= motorSpeedCoefficients[2] * operatingSpeed;
-  motorSpeeds[3] *= motorSpeedCoefficients[3] * operatingSpeed;
-  setWheelSpeeds(motorSpeeds);
+  motorSpeeds[0] *= motorSpeedCoefficients[0] * this->OPERATING_SPEED;
+  motorSpeeds[1] *= motorSpeedCoefficients[1] * this->OPERATING_SPEED;
+  motorSpeeds[2] *= motorSpeedCoefficients[2] * this->OPERATING_SPEED;
+  motorSpeeds[3] *= motorSpeedCoefficients[3] * this->OPERATING_SPEED;
+  this->setWheelSpeeds(motorSpeeds);
 }
 
 void AutoBot::driveRIGHT() {
   int motorSpeeds[4]=DRIVE_RIGHT;
-  motorSpeeds[0] *= motorSpeedCoefficients[0] * operatingSpeed;
-  motorSpeeds[1] *= motorSpeedCoefficients[1] * operatingSpeed;
-  motorSpeeds[2] *= motorSpeedCoefficients[2] * operatingSpeed;
-  motorSpeeds[3] *= motorSpeedCoefficients[3] * operatingSpeed;
-  setWheelSpeeds(motorSpeeds);
+  motorSpeeds[0] *= motorSpeedCoefficients[0] * this->OPERATING_SPEED;
+  motorSpeeds[1] *= motorSpeedCoefficients[1] * this->OPERATING_SPEED;
+  motorSpeeds[2] *= motorSpeedCoefficients[2] * this->OPERATING_SPEED;
+  motorSpeeds[3] *= motorSpeedCoefficients[3] * this->OPERATING_SPEED;
+  this->setWheelSpeeds(motorSpeeds);
 }
 
 void AutoBot::driveREAR() {
   int motorSpeeds[4]=DRIVE_REAR;
-  motorSpeeds[0] *= motorSpeedCoefficients[0] * operatingSpeed;
-  motorSpeeds[1] *= motorSpeedCoefficients[1] * operatingSpeed;
-  motorSpeeds[2] *= motorSpeedCoefficients[2] * operatingSpeed;
-  motorSpeeds[3] *= motorSpeedCoefficients[3] * operatingSpeed;
-  setWheelSpeeds(motorSpeeds);
+  motorSpeeds[0] *= motorSpeedCoefficients[0] * this->OPERATING_SPEED;
+  motorSpeeds[1] *= motorSpeedCoefficients[1] * this->OPERATING_SPEED;
+  motorSpeeds[2] *= motorSpeedCoefficients[2] * this->OPERATING_SPEED;
+  motorSpeeds[3] *= motorSpeedCoefficients[3] * this->OPERATING_SPEED;
+  this->setWheelSpeeds(motorSpeeds);
 }
 
 void AutoBot::driveFRONT_RIGHT() {
   int motorSpeeds[4]=DRIVE_FRONT_RIGHT;
-  motorSpeeds[0] *= motorSpeedCoefficients[0] * operatingSpeed;
-  motorSpeeds[1] *= motorSpeedCoefficients[1] * operatingSpeed;
-  motorSpeeds[2] *= motorSpeedCoefficients[2] * operatingSpeed;
-  motorSpeeds[3] *= motorSpeedCoefficients[3] * operatingSpeed;
-  setWheelSpeeds(motorSpeeds);
+  motorSpeeds[0] *= motorSpeedCoefficients[0] * this->OPERATING_SPEED;
+  motorSpeeds[1] *= motorSpeedCoefficients[1] * this->OPERATING_SPEED;
+  motorSpeeds[2] *= motorSpeedCoefficients[2] * this->OPERATING_SPEED;
+  motorSpeeds[3] *= motorSpeedCoefficients[3] * this->OPERATING_SPEED;
+  this->setWheelSpeeds(motorSpeeds);
 }
 void AutoBot::driveFRONT_LEFT() {
   int motorSpeeds[4]=DRIVE_FRONT_LEFT;
-  motorSpeeds[0] *= motorSpeedCoefficients[0] * operatingSpeed;
-  motorSpeeds[1] *= motorSpeedCoefficients[1] * operatingSpeed;
-  motorSpeeds[2] *= motorSpeedCoefficients[2] * operatingSpeed;
-  motorSpeeds[3] *= motorSpeedCoefficients[3] * operatingSpeed;
-  setWheelSpeeds(motorSpeeds);
+  motorSpeeds[0] *= motorSpeedCoefficients[0] * this->OPERATING_SPEED;
+  motorSpeeds[1] *= motorSpeedCoefficients[1] * this->OPERATING_SPEED;
+  motorSpeeds[2] *= motorSpeedCoefficients[2] * this->OPERATING_SPEED;
+  motorSpeeds[3] *= motorSpeedCoefficients[3] * this->OPERATING_SPEED;
+  this->setWheelSpeeds(motorSpeeds);
 }
 
 void AutoBot::driveREAR_RIGHT() {
   int motorSpeeds[4]=DRIVE_REAR_RIGHT;
-  motorSpeeds[0] *= motorSpeedCoefficients[0] * operatingSpeed;
-  motorSpeeds[1] *= motorSpeedCoefficients[1] * operatingSpeed;
-  motorSpeeds[2] *= motorSpeedCoefficients[2] * operatingSpeed;
-  motorSpeeds[3] *= motorSpeedCoefficients[3] * operatingSpeed;
-  setWheelSpeeds(motorSpeeds);
+  motorSpeeds[0] *= motorSpeedCoefficients[0] * this->OPERATING_SPEED;
+  motorSpeeds[1] *= motorSpeedCoefficients[1] * this->OPERATING_SPEED;
+  motorSpeeds[2] *= motorSpeedCoefficients[2] * this->OPERATING_SPEED;
+  motorSpeeds[3] *= motorSpeedCoefficients[3] * this->OPERATING_SPEED;
+  this->setWheelSpeeds(motorSpeeds);
 }
 
 void AutoBot::driveREAR_LEFT() {
   int motorSpeeds[4]=DRIVE_REAR_LEFT;
-  motorSpeeds[0] *= motorSpeedCoefficients[0] * operatingSpeed;
-  motorSpeeds[1] *= motorSpeedCoefficients[1] * operatingSpeed;
-  motorSpeeds[2] *= motorSpeedCoefficients[2] * operatingSpeed;
-  motorSpeeds[3] *= motorSpeedCoefficients[3] * operatingSpeed;
-  setWheelSpeeds(motorSpeeds);
+  motorSpeeds[0] *= motorSpeedCoefficients[0] * this->OPERATING_SPEED;
+  motorSpeeds[1] *= motorSpeedCoefficients[1] * this->OPERATING_SPEED;
+  motorSpeeds[2] *= motorSpeedCoefficients[2] * this->OPERATING_SPEED;
+  motorSpeeds[3] *= motorSpeedCoefficients[3] * this->OPERATING_SPEED;
+  this->setWheelSpeeds(motorSpeeds);
 }
 
 void AutoBot::setOperatingSpeed(int speed) {
-  AutoBot::operatingSpeed = speed;
+  this->OPERATING_SPEED = speed;
 }
 
-void AutoBot::sendToArduino(const char *message) {
-  Serial2.write(message);
-}
-
-void AutoBot::sendToPython(const char *message) {
-  Serial.write(message);
-}
-
-void AutoBot::triggerGripper(bool value) {
-  if (value) {
-    Serial.println("Activate Gripper");
+void AutoBot::triggerGripperWrapper(bool value, Servo gripServo) {
+  if (value == GRIPPER_CLOSE) {
+    if (this->getFinalDistance()<15)
+      this->triggerGripper(GRIPPER_CLOSE, gripServo);
   } else {
-    Serial.println("Deactivate Gripper");
+    this->triggerGripper(GRIPPER_OPEN, gripServo);
   }
 }
 
-void AutoBot::StepUp()
+void AutoBot::triggerGripper(bool value, Servo gripServo) {
+  
+  if (value == GRIPPER_CLOSE) {
+
+    if (GRIPPER_STATE == GRIPPER_CLOSE) {
+      return;
+    }
+
+    for (int i = OPEN_ANGLE; i>=CLOSE_ANGLE; i--) {
+      gripServo.write(i);
+      Serial.println(i);
+      delay(25);
+      Serial.println("Closing Gripper");
+    }
+    GRIPPER_STATE = GRIPPER_CLOSE;
+  } else {
+
+    if (GRIPPER_STATE == GRIPPER_OPEN) {
+      return;
+    }
+
+    for (int i = CLOSE_ANGLE; i<=OPEN_ANGLE; i++) {
+      gripServo.write(i);
+      Serial.println(i);
+      delay(25);
+      Serial.println("Opening Gripper");
+    }
+    GRIPPER_STATE = GRIPPER_OPEN;
+  }
+}
+
+void AutoBot::gripperUp()
 {
-  digitalWrite(AutoBot::stepdir,LOW);
-  for (int i = 0; i < 100 ; i++) {
-    digitalWrite(AutoBot::steppulse, HIGH);
-    delayMicroseconds(50);
-    digitalWrite(AutoBot::steppulse, LOW);
-    delayMicroseconds(50);
+  digitalWrite(PIN_DIR_LIFTER, LOW); // for upward direction
+  while ((digitalRead(PIN_TACTILE_UP)!=HIGH)&&(LIFTER_STATE == LIFTER_ACTIVE)) {
+    analogWrite(PIN_PWM_LIFTER, LIFTER_SPEED);
+    Serial.println("Going Up");
   }
+  analogWrite(PIN_PWM_LIFTER, 0);
 }
 
-void AutoBot::StepDown() {
-  digitalWrite(AutoBot::stepdir, HIGH);
-  for (int i = 0; i < 100; i++) {
-    digitalWrite(AutoBot::steppulse, HIGH);
-    delayMicroseconds(50);
-    digitalWrite(AutoBot::steppulse, LOW);
-    delayMicroseconds(50);
-  }
-}
-
-void AutoBot::initServo()
+void AutoBot::gripperDown()
 {
-  cservo.attach(AutoBot::cServoPin);
-  gservo.attach(AutoBot::gServoPin);
-  gservo.write(GRIPPER_DEFAULT);
-  cservo.write(CAM_DEFAULT);
+  digitalWrite(PIN_DIR_LIFTER, HIGH); // for downward direction
+  while ((digitalRead(PIN_TACTILE_DOWN)!=HIGH)&&(LIFTER_STATE == LIFTER_ACTIVE)) {
+  analogWrite(PIN_PWM_LIFTER, LIFTER_SPEED);
+  Serial.println("Going Down");
+  }
+  analogWrite(PIN_PWM_LIFTER, 0);
+}
+
+void AutoBot::triggerCamera(bool value, Servo camServo) {
+  delay(4000);
+  Serial.print("Oh no");
+  if (value == CAMERA_POS_DOWN) {
+    if (CAMERA_STATE == CAMERA_POS_DOWN) return;
+    for (int i = CAMERA_DOWN_ANGLE; i<=CAMERA_UP_ANGLE; i++) {
+      camServo.write(i);
+      delay(15);
+    }
+    CAMERA_STATE = CAMERA_POS_DOWN;
+  } else {
+    if (CAMERA_STATE == CAMERA_POS_UP) return;
+    for (int i = CAMERA_UP_ANGLE; i>=CAMERA_DOWN_ANGLE; i--) {
+      camServo.write(i);
+      delay(15);
+    }
+    CAMERA_STATE = CAMERA_POS_UP;
+  }
+}
+
+double AutoBot::powAvg()
+{
+  double x = 0.2;
+  double ret = 0;
+  for(int i=0;i<SONIC_BUFF_SIZE;i++)
+  {
+    ret += pow(this->SONIC_BUFFER[i],x);
+  }
+  ret = ret/(double)SONIC_BUFF_SIZE;
+  ret = pow(ret,1.0/x);
+  return ret;
 }
 
 void AutoBot::setMotorSpeedCoefficients(float coeff1, float coeff2, float coeff3, float coeff4) {
-  motorSpeedCoefficients[0] = coeff1;
-  motorSpeedCoefficients[1] = coeff2;
-  motorSpeedCoefficients[2] = coeff3;
-  motorSpeedCoefficients[3] = coeff4;
+  this->motorSpeedCoefficients[0] = coeff1;
+  this->motorSpeedCoefficients[1] = coeff2;
+  this->motorSpeedCoefficients[2] = coeff3;
+  this->motorSpeedCoefficients[3] = coeff4;
 }
+
