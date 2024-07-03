@@ -1,193 +1,131 @@
 #include "autobot.h"
-#include <WiFi.h>
-#include <ESPAsyncWebServer.h>
-#include <AsyncWebSocket.h>
 #include <ArduinoJson.h>
 
+// PWM Pins for Motors
+#define PWM_PIN_1 4 // 27 5
+#define PWM_PIN_2 6 // 33 6
+#define PWM_PIN_3 8 // 12 3
+#define PWM_PIN_4 2 // 19 11
 
-#define PWM_PIN_1 12
-#define PWM_PIN_2 19
-#define PWM_PIN_3 27
-#define PWM_PIN_4 26
+// Direction Pins for Motors
+#define DIR_PIN_1 5 // 18 12
+#define DIR_PIN_2 7 // 23 7
+#define DIR_PIN_3 9 // 13 4
+#define DIR_PIN_4 3 // 21 10
 
-#define DIR_PIN_1 13
-#define DIR_PIN_2 21
-#define DIR_PIN_3 18
-#define DIR_PIN_4 23
+#define BAUD_RATE 9600
 
-#define CAM_SERVO_PIN 25
-#define GRAB_SERVO_PIN 32
+Servo gripServo;
 
-#define STEPPER_PWM_PIN 33
-#define STEPPER_DIR_PIN 22
+AutoBot myAutoBot(
+  PWM_PIN_1,
+  DIR_PIN_1,
+  PWM_PIN_2,
+  DIR_PIN_2,
+  PWM_PIN_3, 
+  DIR_PIN_3, 
+  PWM_PIN_4, 
+  DIR_PIN_4);
 
-#define RX_ARDUINO_COMM 16
-#define TX_ARDUINO_COMM 17
-
-#define DEVICE_NAME "ESP32 MANUAL"
-#define BAUD_RATE 115200
-
-#define NORMAL_SPEED 20
-#define FOCUS_SPEED 10
-
-AutoBot myAutoBot(PWM_PIN_1, DIR_PIN_1, PWM_PIN_2, DIR_PIN_2, PWM_PIN_3, DIR_PIN_3, PWM_PIN_4, DIR_PIN_4, RX_ARDUINO_COMM, TX_ARDUINO_COMM, CAM_SERVO_PIN, GRAB_SERVO_PIN, STEPPER_PWM_PIN, STEPPER_DIR_PIN);
-AsyncWebServer server(80);
-AsyncWebSocket ws("/ws");
-
-// temporary
-bool DEBUG = false;
-int speed1 = 0;
-int speed2 = 0;
-int speed3 = 0;
-int speed4 = 0;
-
-const char *ssid = "7.0 GHz";
-const char *password = "havoksahil";
 void setup() {
   Serial.begin(BAUD_RATE);
-  Serial2.begin(BAUD_RATE, SERIAL_8N1, RX_ARDUINO_COMM, TX_ARDUINO_COMM);
-  WiFi.begin(ssid, password);
+  myAutoBot.setMotorSpeedCoefficients(1.6, 1, 1.6, 1);
+  myAutoBot.setDriveState(BOT_IDLE);
+  myAutoBot.setPeriState(PERI_IDLE);
+  gripServo.attach(PIN_SERVO_GRIPPER);
+  pinMode(PIN_SONIC_TRIG, OUTPUT);
+  pinMode(PIN_SONIC_ECHO, INPUT);
+  pinMode(PIN_DIR_LIFTER, OUTPUT);
+  pinMode(PIN_PWM_LIFTER, OUTPUT);
+  pinMode(PIN_TACTILE_UP, INPUT);
+  pinMode(PIN_TACTILE_DOWN, INPUT);
+}
 
-  // connect to wifi network
-  while (WiFi.status()!= WL_CONNECTED) {
-    delay(1000);
-    Serial.println("Connecting to WiFi...");
+int arToNum[3];
+int iter = 0;
+bool incomingNum = false;
+
+int getNum() {
+  int result = 0;
+  for (int i = 0; i < 3; i++) {
+        result = result * 10 + (arToNum[i] - '0');
   }
-  Serial.println("Connected to WiFi...");
-  Serial.println(WiFi.localIP());
-  ws.onEvent(onWebSocketEvent);
-  server.addHandler(&ws);
-  server.begin();
-  myAutoBot.setOperatingSpeed(20);
-  myAutoBot.setMotorSpeedCoefficients(1, 1, 1, 1);
-  myAutoBot.initServo();
-  myAutoBot.setState('x');
+  return result;
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  // ball following mode
-  //myAutoBot.StepUP();
-  if (Serial.available()>0) {
-    char val = Serial.read();
-      if (val>='a' && val<='z')
-        myAutoBot.setState(val);
+  if (Serial.available()) {
+    int ch = Serial.read();
+    if (incomingNum == false) {
+      if ((ch>=(int)'a') && (ch <= (int)'z')) {
+        myAutoBot.setDriveState((char)ch);
+      } else if ((ch >= (int)'A') && (ch <= (int)'Z')) {
+        myAutoBot.setPeriState((char)ch);
+      } else if (ch == (int)'<') {
+        incomingNum = true;
+        iter = 0;
+      }
+    } else {
+      arToNum[iter++] = ch;
+      if (ch == '>') {
+        incomingNum = false;
+        iter = 0;
+        int speed = getNum();
+        myAutoBot.setOperatingSpeed(speed);
+      }
+    }
+    Serial.println(myAutoBot.OPERATING_SPEED);
   }
-  Serial.println(myAutoBot.getState());
 
-  if (myAutoBot.getState() == BOT_FORWARD) {
-    myAutoBot.driveFRONT();
-  }
-  else if (myAutoBot.getState() == BOT_ROT_CLOCK) {
-    myAutoBot.rotCLK();
-  } 
-  else if (myAutoBot.getState() == BOT_ROT_ACLOCK) {
-    myAutoBot.rotACLK();
-  }
-  else if(myAutoBot.getState()==TRIGGER_GRIPPER_ACT)
-  {
-    myAutoBot.pick();
-    myAutoBot.setState(BOT_IDLE);
-  }
-  else if (myAutoBot.getState() == TRIGGER_GRIPPER_DEACT) {
-    myAutoBot.drop();
-    myAutoBot.setState(BOT_IDLE);
-  }
-  else if(myAutoBot.getState()== CAM_ROT_DOWN)
-  {
-    myAutoBot.camRotdown();
-  }
-  else if(myAutoBot.getState()==CAM_ROT_UP)
-  {
-    myAutoBot.camRotup();
-  }
-  else if (myAutoBot.getState()==BOT_LOWER_SPEED) {
-    myAutoBot.setOperatingSpeed(10);
-    myAutoBot.setState('x');
-  }
-  else if (myAutoBot.getState()==BOT_UPPER_SPEED) {
-    myAutoBot.setOperatingSpeed(20);
-    myAutoBot.setState('x');
-  }
-  else if (myAutoBot.getState() == STEPPER_UP) {
-    myAutoBot.StepUp();
-  }
-  else if (myAutoBot.getState() == STEPPER_DOWN) {
-    myAutoBot.StepDown();
-  } else {
-    if (!(speed1 || speed2 || speed3 || speed4)) {
+  switch (myAutoBot.getDriveState()) {
+    case BOT_FORWARD:
+      myAutoBot.driveFRONT();
+      break;
+    case BOT_ROT_CLOCK:
+      myAutoBot.rotCLK();
+      break;
+    case BOT_ROT_ACLOCK:
+      myAutoBot.rotACLK();
+      break;
+    case BOT_RIGHT:
+      myAutoBot.driveRIGHT();
+      break;
+    case BOT_LEFT:
+      myAutoBot.driveLEFT();
+      break;
+    case BOT_BACKWARD:
+      myAutoBot.driveREAR();
+      break;
+
+    default:
       myAutoBot.stop();
-    }
-  }
-
-  if (speed1 || speed2 || speed3 || speed4) {
-    int speeds[4] = {speed1, speed2, speed3, speed4};
-    myAutoBot.setWheelSpeeds(speeds);
-  }
-}
-
-void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
-  switch (type) {
-    case WS_EVT_CONNECT:
-      Serial.println("WebSocket client connected");
-      break;
-    case WS_EVT_DISCONNECT:
-      Serial.println("WebSocket client disconnected");
-      break;
-    case WS_EVT_DATA:
-      handleWebSocketData(client, data, len);
-      break;
-    case WS_EVT_PONG:
-    case WS_EVT_ERROR:
-      
       break;
   }
-}
 
-void handleWebSocketData(AsyncWebSocketClient *client, uint8_t *data, size_t len) {
-  // Convert the received data to a String
-  String receivedData = String((char*)data);
-  // Parse the JSON data using ArduinoJson library
-  StaticJsonDocument<256> jsonDocument;
-  DeserializationError error = deserializeJson(jsonDocument, receivedData);
+  switch (myAutoBot.getPeriState()) {
 
-  // Check for parsing errors
-  if (error) {
-    Serial.print("JSON parsing error: ");
-    Serial.println(error.c_str());
-    return;
+    case TRIGGER_GRIPPER_CLOSE:
+      myAutoBot.triggerGripper(GRIPPER_CLOSE, gripServo);
+      break;
+    
+    case TRIGGER_GRIPPER_OPEN:
+      myAutoBot.triggerGripper(GRIPPER_OPEN, gripServo);
+      break;
+    
+    case TRIGGER_LIFTER_UP:
+      myAutoBot.gripperUp();
+      break;
+    
+    case TRIGGER_LIFTER_DOWN:
+      myAutoBot.gripperDown();
+      break;
+
+    default:
+      break;
+    
   }
 
-  if (jsonDocument.containsKey("type") && (jsonDocument["type"]=="MCMD")) {
-    if (jsonDocument.containsKey("cmd")) {
-      String val = jsonDocument["cmd"];
-      char cmd = val[0];
-      myAutoBot.setState(cmd);
-    }
-  }
-  else if (jsonDocument.containsKey("type") && (jsonDocument["type"] == "DV")) {
-    if (jsonDocument.containsKey("speed1") && jsonDocument.containsKey("speed2") && jsonDocument.containsKey("speed3") && jsonDocument.containsKey("speed4")) {
-      if (DEBUG) DEBUG = false;
-      speed1 = (int)jsonDocument["speed1"];
-      speed2 = (int)jsonDocument["speed2"];
-      speed3 = (int)jsonDocument["speed3"];
-      speed4 = (int)jsonDocument["speed4"];
-    }
-  } else if (jsonDocument.containsKey("type") && (jsonDocument["type"] == "DBG")) {
-    if (jsonDocument.containsKey("speed1") && jsonDocument.containsKey("speed2") && jsonDocument.containsKey("speed3") && jsonDocument.containsKey("speed4")) {
-      if (!DEBUG) DEBUG = true;
-      speed1 = (int)jsonDocument["speed1"];
-      speed2 = (int)jsonDocument["speed2"];
-      speed3 = (int)jsonDocument["speed3"];
-      speed4 = (int)jsonDocument["speed4"];
-    }
-  } else if (jsonDocument.containsKey("type") && (jsonDocument["type"] == "SDV")) {
-    if (jsonDocument.containsKey("speed1") && jsonDocument.containsKey("speed2") && jsonDocument.containsKey("speed3") && jsonDocument.containsKey("speed4")) {
-      if (DEBUG) DEBUG = false;
-      speed1 = (int)jsonDocument["speed1"];
-      speed2 = (int)jsonDocument["speed2"];
-      speed3 = (int)jsonDocument["speed3"];
-      speed4 = (int)jsonDocument["speed4"];
-    }
-  }
+  myAutoBot.setPeriState(PERI_IDLE);
+
+  delay(100);
 }

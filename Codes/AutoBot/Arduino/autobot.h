@@ -2,13 +2,11 @@
 #define AUTOBOT_H
 
 #include <Arduino.h>
-#include <ESP32Servo.h>
+#include <Servo.h>
 
-#define BAUD_RATE 115200
-#define LINE_FOLLOW 0
-#define BALL_FOLLOW 1
-#define BALL_FOLLOW_FINE 2
+#define BAUD_RATE 9600
 
+// Kinematic Macros
 #define DRIVE_FRONT {1, 1, 1, 1}
 #define DRIVE_REAR {-1, -1, -1, -1}
 #define DRIVE_LEFT {-1, 1, -1, 1}
@@ -21,94 +19,133 @@
 #define ROTATE_ANTICLOCK {-1, 1, 1, -1}
 #define STOP {0, 0, 0, 0}
 
-// Command Macros
 
+// Command Macros
 #define BOT_ROT_CLOCK 'l'
 #define BOT_ROT_ACLOCK 'k'
 #define BOT_FORWARD 'w'
 #define BOT_BACKWARD 's'
+#define BOT_LEFT 'a'
+#define BOT_RIGHT 'd'
 #define BOT_FRONT_RIGHT 'e'
 #define BOT_FRONT_LEFT 'q'
 #define BOT_BACK_RIGHT 'c'
 #define BOT_BACK_LEFT 'z'
-#define BOT_UPPER_SPEED 'U'
-#define BOT_LOWER_SPEED 'L'
-
-#define CAM_ROT_UP 'v'
-#define CAM_ROT_DOWN 'b'
-#define TRIGGER_GRIPPER_ACT 'g'
-#define TRIGGER_GRIPPER_DEACT 'h'
-#define STEPPER_UP 'o'
-#define STEPPER_DOWN 'p'
 #define BOT_IDLE 'x'
 
-#define WATCH_MODE 0
-#define FOCUS_MODE 1
+#define TRIGGER_LIFTER_UP 'U'
+#define TRIGGER_LIFTER_DOWN 'P'
+#define TRIGGER_GRIPPER_CLOSE 'C'
+#define TRIGGER_GRIPPER_OPEN 'O'
+#define TRIGGER_LIFTER_CEISE 'Z'
+#define TRIGGER_CAMERA_UP 'V'
+#define TRIGGER_CAMERA_DOWN 'B'
+#define PERI_IDLE 'I'
 
-#define GRIPPER_INACTIVE 0
-#define GRIPPER_ACTIVE 1
+#define IN_RANGE_BALL true
+#define OUT_RANGE_BALL false
 
-#define GRIPPER_DEFAULT 60
-#define CAM_DEFAULT 120
+#define LIFTER_INACTIVE false
+#define LIFTER_ACTIVE true
+
+#define GRIPPER_OPEN false
+#define GRIPPER_CLOSE true
+
+#define CAMERA_POS_UP false
+#define CAMERA_POS_DOWN true
+
+// Macros for Positions
+#define CLOSE_ANGLE 30
+#define OPEN_ANGLE 80
+#define SONIC_BUFF_SIZE 10
+#define LIFTER_SPEED 200
+#define CAMERA_UP_ANGLE 150
+#define CAMERA_DOWN_ANGLE 120
+
+// Pins for Peripherals
+#define PIN_SONIC_TRIG 48 // 11
+#define PIN_SONIC_ECHO 50 // 12
+#define PIN_PWM_LIFTER 33
+#define PIN_DIR_LIFTER 22
+#define PIN_TACTILE_UP 46 // 8
+#define PIN_TACTILE_DOWN 52 // 7
+#define PIN_SERVO_GRIPPER 12 // 5
+#define PIN_SERVO_CAMERA 11 // 3
 
 class AutoBot {
   public:
-  AutoBot(int pwmPin1, int dirPin1, int pwmPin2, int dirPin2, int pwmPin3, int dirPin3, int pwmPin4, int dirPin4, int rx, int tx, int camservo, int grabservo,int stepperPulse, int stepperDir);
+
+  // Variables for State Management of the Bot
+  double SONIC_BUFFER[SONIC_BUFF_SIZE];
+  int OPERATING_SPEED;
+  int GRIPPER_STATE;
+  int CAMERA_STATE;
+  int LIFTER_STATE;
+  int RANGE_STATE;
+
+  AutoBot(
+  int pwmPin1, 
+  int dirPin1, 
+  int pwmPin2, 
+  int dirPin2, 
+  int pwmPin3, 
+  int dirPin3, 
+  int pwmPin4, 
+  int dirPin4
+  );
   ~AutoBot();
 
-  // methods for actuating agent
+  // Function to Change the Speed Multiplier of the Bot
   void setMotorSpeedCoefficients(float coeff1, float coeff2, float coeff3, float coeff4);
+
   void setOperatingSpeed(int speed);
   void drive(int x, int y);
+  void stop();
+
   void driveFRONT();
   void driveLEFT();
   void driveRIGHT();
   void driveREAR();
+
   void rotCLK();
   void rotACLK();
+
   void driveFRONT_RIGHT();
   void driveFRONT_LEFT();
   void driveREAR_RIGHT();
   void driveREAR_LEFT();
+
   void setWheelSpeeds(int motorSpeeds[]);
-  void triggerGripper(bool value);
-  void pick();
-  void drop();
-  void camRotdown();
-  void camRotup();
-  void stop();
-  void initServo();
-  void StepUp();
-  void StepDown();
 
-  char getState();
-  void setState(char val);
+  // Function for Bot Peripherals
+  void triggerGripperWrapper(bool value, Servo gripServo);
+  void triggerGripper(bool value,Servo gripServo);
+  void triggerCamera(bool value, Servo camServo);
 
-  // methods for transmission agent
-  void sendToArduino(const char *message);
-  void sendToPython(const char *message);
-  
+  void gripperUp();
+  void gripperDown();
+
+  void cameraUp();
+  void cameraDown();
+
+  // Functions for UltraSonic Distance Sensors
+  double getFinalDistance();
+  double getUltraDist();
+  double powAvg();
+
+  char getPeriState();
+  char getDriveState();
+  void setPeriState(char val);
+  void setDriveState(char val);
   
   private:
-    // properties of actuating agent
-
-    char state;
+    char driveState;
+    char periState;
 
     int pwmPins[4];
     int dirPins[4];
-    int stepdir;
-    int steppulse;
-    float motorSpeedCoefficients[4];
-    int operatingSpeed;
-    int camMode;
-    int gripperState;
-    int cServoPin;
-    int gServoPin;
-    Servo cservo;
-    Servo gservo;
 
-    // properties of transmission agent
-    int serialPins[2]; // [tx, rx]
+    float motorSpeedCoefficients[4];
 };
 
 #endif
