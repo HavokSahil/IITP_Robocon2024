@@ -8,7 +8,7 @@ import time
 
 #Create a driver object
 driver = Driver()
-driver.initialiseSerial("/dev/ttyACM0",9600)
+driver.initialiseSerial("COM11",9600)
 
 masterChef = MasterChef("suvrayan", MasterChef.BALL_FOLLOW)
 
@@ -20,11 +20,11 @@ far_ball_detector = BallDetector("Resource/really_big_model.pt",640,0.45,0.45,32
 far_silo_detector = SiloDetector("Resource/really_big_model.pt",640,0.45,0.45,320,480,1)
 
 #The laptop camera is the far camera
-far_cap = cv2.VideoCapture(1)
+far_cap = cv2.VideoCapture(0)
 far_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 far_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 #The top camera is the close camera
-close_cap = cv2.VideoCapture(3)
+close_cap = cv2.VideoCapture(1)
 close_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 close_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
@@ -69,8 +69,9 @@ while True:
             #Draw
             cv2.imshow("CLOSE",close_frame)
             cv2.imshow("FAR",far_frame)
-
-
+            
+        case MasterChef.BALL_FOCUS:
+            Decider.ballFocusmode(close_frame, close_ball_detector, driver, masterChef)
         case MasterChef.SILO_FOLLOW:
             Decider.siloFollow(far_silo_detector, far_frame, driver, masterChef)
             far_silo_detector.highlightFrame(far_frame)

@@ -72,6 +72,7 @@ class Driver:
 
     def triggerGripper(self):
         self.sendCommandToSerial('c')
+        
 
     def triggerRelease(self):
         self.sendCommandToSerial('o')

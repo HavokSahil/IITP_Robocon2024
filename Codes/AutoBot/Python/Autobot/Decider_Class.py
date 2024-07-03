@@ -36,6 +36,7 @@ class Decider:
             elif(loc_val == BallDetector.CENTER):
                 print("Ball is close and in the centre")
                 driver.stop()
+                masterChef.poke(MasterChef.BALL_FOCUS)
             elif(loc_val == BallDetector.LEFT):
                 print("Ball is close and in the left")
                 driver.rotAClock()
@@ -68,7 +69,44 @@ class Decider:
                 print("BALL CANT BE FOUND, ROTATE")
                 driver.rotClock()
 
+    def ballFocusmode(close_frame, close_ball_detector, driver, masterChef):
 
+        count, pos, close_frame = close_ball_detector.getPrediction(close_frame)
+
+        if (count == 0):
+            masterChef.poke(MasterChef.BALL_FOCUS)
+
+        else:
+
+            presenceStatus = close_ball_detector.classifyBallPresence(pos[0], pos[1])
+
+            match presenceStatus:
+                    case BallDetector.CENTER:
+                        driver.stop()
+                        driver.triggerRelese()
+                        driver.gripperDown()
+                        if close_ball_detector.focusAligned(pos[0],pos[1]):
+                            driver.triggerGripper()
+                            driver.gripperUp()
+                        else:
+                            driver.lower()
+                            driver.moveForward()
+                        
+                        """
+                        if driver.triggerGripper():
+                            driver.gripperUp()
+                        else:
+                            while not driver.triggerGripper:
+                                driver.lowerSpeed()
+                                driver.moveForward()
+                                driver.triggerGripper()"""
+                                
+                    case BallDetector.LEFT:
+                        driver.rotAClock()
+                    case BallDetector.RIGHT:
+                        driver.rotClock()
+        
+        
     @staticmethod
     def siloFollow(silo_detector, frame, driver, masterChef):
         
