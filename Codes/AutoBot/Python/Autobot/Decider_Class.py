@@ -5,56 +5,62 @@ from .Driver import Driver
 
 class Decider:
     @staticmethod
-    def ballFollow(close_ball_detector,far_ball_detector,close_frame,far_frame,driver):
+    def ballFollow(close_ball_detector,far_ball_detector,close_frame,far_frame,driver,pid):
         
-        #Close detector
+        #Update the prediction
         close_ball_detector.updateDetection(close_frame)
-
-        #Far detector
         far_ball_detector.updateDetection(far_frame)
 
 
+        #Decider.ballFollow(close_ball_detector,far_ball_detector,close_frame,far_frame,driver)
+        close_ball_detector.getPrediction()
+        far_centre = far_ball_detector.getPrediction()
+        close_centre = close_ball_detector.getPrediction()
 
-        #If no close balls
-        close_ball = close_ball_detector.getPrediction(close_frame)
+        
+        #If ball is close
+        if(close_centre[0]>=0):
+            print("CLOSE")
+            if(BallDetector.classifyBallPresence(close_centre[0],close_centre[1])!=BallDetector.CENTER):
+                pid_val = pid.run(far_centre[0])
+                abs_pid = abs(pid.run(far_centre[0]))
+                val = abs_pid/(abs_pid+40)
 
-        #If close ball exists (Position is (-1,-1))
-        if(close_ball[0]>0):
-            #Find the location
-            loc_val = BallDetector.classifyBallPresence(close_ball[0],close_ball[1])
-            
-            print(close_ball)
-            if(loc_val == BallDetector.CENTER):
-                print("Ball is close and in the centre")
-                driver.stop()
-            elif(loc_val == BallDetector.LEFT):
-                print("Ball is close and in the left")
-                driver.rotClock()
-            elif(loc_val == BallDetector.RIGHT):
-                print("Ball is close and in the right")
-                driver.rotClock()
-            else:
-                print("The ball is close, but location can't be determined")
-
-        else:
-            far_ball = far_ball_detector.getPrediction(far_frame)
-            if(far_ball[0]>0):    
-                #Find the location
-                loc_val = BallDetector.classifyBallPresence(far_ball[0],far_ball[1])
+                print(pid.getError(far_centre[0]),"::",abs_pid,"::",val**4)
                 
-                if(loc_val == BallDetector.CENTER):
-                    print("Ball is far and in the centre")
-                    driver.moveForward()
-                elif(loc_val == BallDetector.LEFT):
-                    print("Ball is far and in the left")
-                    driver.rotAClock()
-                elif(loc_val == BallDetector.RIGHT):
-                    print("Ball is far and in the right")
+        
+                if(pid_val<0):
                     driver.rotClock()
                 else:
-                    
-                    print("The ball is far, but location can't be determined")
-            
+                    driver.rotAClock()
+            elif(close_centre[1]<300):
+                #Ball is in centre and close, STOP
+                driver.moveForward()
             else:
-                print("BALL CANT BE FOUND, ROTATE")
-                driver.rotClock()
+                driver.stop()
+
+        #Calculate PID
+        elif(far_centre[0]>=0):
+            print("FAR")
+            if(BallDetector.classifyBallPresence(far_centre[0],far_centre[1])!=BallDetector.CENTER):
+                pid_val = pid.run(far_centre[0])
+                abs_pid = abs(pid.run(far_centre[0]))
+                val = abs_pid/(abs_pid+40)
+
+                print(pid.getError(far_centre[0]),"::",abs_pid,"::",val**4)
+                
+        
+                if(pid_val<0):
+                    driver.rotClock()
+                else:
+                    driver.rotAClock()
+            else:
+                #Ball is in centre, go ahead
+                driver.moveForward()
+            
+
+        else:
+            print("NO BALL")
+            driver.stop()
+
+

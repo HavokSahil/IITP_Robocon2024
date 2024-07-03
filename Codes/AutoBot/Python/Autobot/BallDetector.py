@@ -26,7 +26,7 @@ class BallDetector(Detector):
 
 
     #Get prediction will give us the largest class
-    def getPrediction(self, frame):
+    def getPrediction(self):
         """
         
         Remember to update predictions before using this
@@ -36,7 +36,6 @@ class BallDetector(Detector):
             [x, y] if ball is present
             [-1.-1] if no ball is present
         """
-        
         
 
         #Use list of blue balls if we are in the blue team, else use red balls
@@ -112,8 +111,8 @@ class BallDetector(Detector):
         """
 
         # Check if the point lies inside the trapezium
-        f1 = 7*y-24*x+2880
-        f2 = 7*y+24*x-12480
+        f1 = y-3*x
+        f2 = y+3*x-1920
 
         if (f1<0 and f2<0):
             return BallDetector.CENTER

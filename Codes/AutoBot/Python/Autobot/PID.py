@@ -29,8 +29,8 @@ class PID:
 
         self.prev_error = 0
     
-    def get_error(self,curr_x):
-        return abs(curr_x-self.centre)
+    def getError(self,curr_x):
+        return curr_x-self.centre
 
 
     def update(self,error):
@@ -41,14 +41,19 @@ class PID:
         #Get the error (Prop)
         self.prop = error
 
+        #Delta time with
+        delta = time_now-self.last_update
+        #A constant to prevent division by 0
+        kappa = 0.0001
+
         #Get the integration
-        self.integ += error*(time_now-self.last_update())
+        self.integ += error*(delta)
 
         #Get the differentiation
-        self.deriv = (error-self.prev_error)/(time_now-self.last_update())
+        self.deriv = (error-self.prev_error)/(delta+kappa)
 
         #Update the last_update time
-        self.last_update = time_now()
+        self.last_update = time_now
 
         #Update previous error
         self.prev_error = error
@@ -68,7 +73,7 @@ class PID:
         
 
         #Get the error
-        error = self.get_error(curr_x)
+        error = self.getError(curr_x)
         #Use the error to update PID
         self.update(error)
         #Return the PID value

@@ -2,12 +2,18 @@ from Autobot.BallDetector import BallDetector
 from Autobot.Driver import Driver
 from Autobot.SiloDetector import SiloDetector
 from Autobot.Decider_Class import Decider
+from Autobot.PID import PID
 import cv2
 import time
+#length for angle of the computer is 38 cm
+#angle 50 degrees
 
 #Create a driver object
 driver = Driver()
 driver.initialiseSerial("COM6",9600)
+
+#Create a PID object
+pid = PID(1,0,0,320)
 
 #Create a ball for the close camera for ball find mode
 close_ball_detector = BallDetector("C:/Users/Suvra/OneDrive/Documents/IIT Patna/Robocon/Codes/Auto Bot/Python Code/really_big_model.pt",640,0.45,0.45,320,480,1)
@@ -37,11 +43,10 @@ if not close_cap.isOpened():
 
 
 
-       
 
 
-
-
+#TO account for time lag
+pid.restart()
 while True:
    #Get the close camera frame
     close_ret,close_frame = close_cap.read()
@@ -54,15 +59,14 @@ while True:
 
     if not far_ret:
         print("Far Camera frame drop")
-
-
-    Decider.ballFollow(close_ball_detector,far_ball_detector,close_frame,far_frame,driver)
-   
-
+    
+    Decider.ballFollow(close_ball_detector,far_ball_detector,close_frame,far_frame,driver,pid)
     #Highlight frames
     close_ball_detector.highlightFrame(close_frame)            
     far_ball_detector.highlightFrame(far_frame)
 
+    close_frame = cv2.flip(close_frame,1)
+    far_frame = cv2.flip(far_frame,1)
     #Draw
     cv2.imshow("CLOSE",close_frame)
     cv2.imshow("FAR",far_frame)
