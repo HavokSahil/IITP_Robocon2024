@@ -180,7 +180,7 @@ class Detector:
         Returns:
             bool: True if the camera is focused on an aligned position, False otherwise.
         """
-        return 200 <= x <= 440 and 200 <= y <= 480
+        return 160 <= x <= 480 and 200 <= y <= 480
     
     @staticmethod
     def classifyPresence(x, y):

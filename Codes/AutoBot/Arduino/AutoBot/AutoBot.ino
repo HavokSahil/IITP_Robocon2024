@@ -77,6 +77,7 @@ void loop() {
     Serial.println(myAutoBot.OPERATING_SPEED);
   }
 
+  Serial.println(digitalRead(PIN_TACTILE_UP));
   switch (myAutoBot.getDriveState()) {
     case BOT_FORWARD:
       myAutoBot.driveFRONT();

@@ -3,18 +3,26 @@ from .SiloDetector import SiloDetector
 from .Driver import Driver
 from .Detector import Detector
 from .MasterChef import MasterChef
+#For threading 
+from threading import Thread
+
 
 class Decider:
     @staticmethod
     def ballFollow(close_ball_detector, far_ball_detector, close_frame, far_frame, driver, masterChef):
         
-        #Close detector
-        close_ball_detector.updateDetection(close_frame)
+        #Close detector thread
+        t1 = Thread(target = BallDetector.updateDetection,args=(close_ball_detector,close_frame,))
 
-        #Far detector
-        far_ball_detector.updateDetection(far_frame)
+        #Far detector thread
+        t2 = Thread(target=BallDetector.updateDetection,args=(far_ball_detector,far_frame,))
+        #Start both threads
+        t1.start()
+        t2.start()
 
-        
+        #Wait for threads to join
+        t1.join()
+        t2.join()       
     
         #If no close balls
         close_ball = close_ball_detector.getPrediction(close_frame)
@@ -102,12 +110,17 @@ class Decider:
                             masterChef.earnCredit()
 
                             if masterChef.isCreditAvailable():
+                                #PICK UP THE BALL
                                 driver.stop()
                                 driver.triggerGripper()
                                 
 
                                 driver.gripperUp()
                                 masterChef.spendCredit()
+
+                                #FORCE MASTERCHEF TO CHANGE
+                                masterChef.forceMaster(MasterChef.SILO_FOLLOW)                                    
+
                             
                         else:
                             driver.moveForward()
@@ -121,29 +134,65 @@ class Decider:
         
         
     @staticmethod
-    def siloFollow(silo_detector, frame, driver, masterChef):
-        
+    def siloFollow(silo_detector:SiloDetector, frame, driver:Driver , masterChef:MasterChef):
+        driver.startSonicTransmission()
+        sonicThreshold = 20 #The distance which is the threshold for the ultrasound to activate
         silo_loc = silo_detector.getLocOptimalSilo(frame)
+
+
+        driver.readBuffer()
+
+        left_val = float(driver.data['l'])
+
+        right_val = float(driver.data['r'])
+
+        print(left_val,":",right_val)
+
 
         if (silo_loc[0]>0):
             
             loc_val = SiloDetector.classifyPresence(silo_loc[0],  silo_loc[1])
 
             # if we are near silo (ultrasonic calibration)
-            # To be written
+            #If both Ultrasounds are close
+            if(left_val < sonicThreshold and right_val<sonicThreshold):
+                if(silo_loc[0]>200):
+                    print("Move Right")
+                    driver.moveRight()
+                else:
+                    print("Release")
+                    driver.triggerRelease()
+                    masterChef.forceMaster(MasterChef.BALL_FOLLOW)
 
-            #if we are far from silo
-            if (loc_val == SiloDetector.CENTER):
-                print("Silo is in front")
-                driver.moveForward()
-            elif (loc_val == SiloDetector.LEFT):
-                print("Silo is in left")
+            #Else if the left ultrasound is close and the right is far
+            elif(left_val<sonicThreshold):
+
+                print("SILO ANCHORING USING LEFT")
+                #We rotate anticlockwise,using the left silo as an achor
                 driver.rotAClock()
-            elif (loc_val == SiloDetector.RIGHT):
-                print("Silo is in right")
+            #Else if the right ultrasound is close and left is far
+            elif(right_val<sonicThreshold):
+                print("SILO ANCHORING USING RIGHT")
                 driver.rotClock()
+            
+            #Else if the silo is far away
 
+            else:
+                #if we are far from silo
+                if (loc_val == SiloDetector.CENTER):
+                    print("Silo is in front")
+                    driver.moveForward()
+                elif (loc_val == SiloDetector.LEFT):
+                    print("Silo is in left")
+                    driver.rotAClock()
+                elif (loc_val == SiloDetector.RIGHT):
+                    print("Silo is in right")
+                    driver.rotClock()
+
+
+        #If silo is not detected
         else:
+            print("NO SILO FOUND")
             driver.rotAClock()
 
         

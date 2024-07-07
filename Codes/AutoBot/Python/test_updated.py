@@ -22,11 +22,11 @@ far_ball_detector = BallDetector(model_path,640,0.45,0.45,320,480,1)
 far_silo_detector = SiloDetector(model_path,640,0.45,0.45,320,480,1)
 
 #The laptop camera is the far camera
-far_cap = cv2.VideoCapture(0)
+far_cap = cv2.VideoCapture(1)
 far_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 far_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 #The top camera is the close camera
-close_cap = cv2.VideoCapture(1)
+close_cap = cv2.VideoCapture(0)
 close_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 close_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
@@ -40,11 +40,11 @@ if not close_cap.isOpened():
     print("ERROR::CANNOT OPEN CLOSE CAMERA")
     exit()    
 
+ 
 
 
 
-
-
+#  masterChef.forceMaster(MasterChef.SILO_FOLLOW)
 while True:
    #Get the close camera frame
     close_ret,close_frame = close_cap.read()
@@ -60,25 +60,48 @@ while True:
 
 
     match masterChef.getMode():
+
+        #Follow the ball
         case MasterChef.BALL_FOLLOW:
             Decider.ballFollow(close_ball_detector,far_ball_detector,close_frame,far_frame,driver, masterChef)
             
+            
+            close_ball_detector.highlightFrame(close_frame)            
+            far_ball_detector.highlightFrame(far_frame)
+    
+            
+            
+        
+        
+        #In case in ball focus mode
         case MasterChef.BALL_FOCUS:
             Decider.ballFocusmode(close_frame, close_ball_detector, driver, masterChef)
+            
+            close_ball_detector.highlightFrame(close_frame)            
+            far_ball_detector.highlightFrame(far_frame)
+    
+            
+          
+        
+        #In case it is in silo follow mode
+        case MasterChef.SILO_FOLLOW:
+            Decider.siloFollow(far_silo_detector, far_frame, driver, masterChef)
+            far_silo_detector.highlightFrame(far_frame)
+
+            cv2.imshow("SILO FAR", far_frame)
+
         
        # case MasterChef.SILO_FOLLOW:
        #     Decider.siloFollow(far_silo_detector, far_frame, driver, masterChef)
        #     far_silo_detector.highlightFrame(far_frame)
         
          #   cv2.imshow("SILO FAR", far_frame)
-    close_ball_detector.highlightFrame(close_frame)            
-    far_ball_detector.highlightFrame(far_frame)
     
     close_frame = cv2.flip(close_frame,1)
     far_frame = cv2.flip(far_frame,1)
-    cv2.imshow("CLOSE",close_frame)
-    cv2.imshow("FAR",far_frame) 
-        
+
+    driver.clearBuffer()
+    
     #Exit conditions cv2.imshow("AutoBot's Vision", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
