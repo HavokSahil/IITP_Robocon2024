@@ -52,8 +52,9 @@ end_load = time.time()
 input(("LOADING COMPLETE.... Time Taken "+str(end_load-start_load)))
 
 
+#FOR DEBUGGING
 
-# masterChef.forceMaster(MasterChef.SILO_FOLLOW)
+#masterChef.forceMaster(MasterChef.TEST)
 
 while True:
    #Get the close camera frame
@@ -120,8 +121,16 @@ while True:
             print("RELEASE")
             masterChef.forceMaster(MasterChef.BALL_FOLLOW)
                 
-
-
+        case MasterChef.SILO_FOCUS:
+            Decider.siloFocus(far_silo_detector,far_frame,driver,masterChef)
+            
+            far_silo_detector.highlightFrame(far_frame)
+        
+        #FOR DEBUGGING ONLY
+        case MasterChef.TEST:
+            driver.setRotSpeed(30)
+            driver.rotClock()
+            driver.clearBuffer()
 
     #Show the windows
     cv2.imshow("CLOSE",close_frame)    

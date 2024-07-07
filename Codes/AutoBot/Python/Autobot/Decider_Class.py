@@ -28,7 +28,7 @@ class Decider:
         close_ball = close_ball_detector.getPrediction(close_frame)
 
         #Default speed
-        
+        driver.setRotSpeed(30)
 
         #If close ball exists (Position is (-1,-1))
         if(close_ball[0]>0):
@@ -87,6 +87,7 @@ class Decider:
                 driver.rotClock()
 
     def ballFocusmode(close_frame, close_ball_detector, driver, masterChef):
+        driver.setRotSpeed(30)
         close_ball_detector.updateDetection(close_frame)
         
         if (masterChef.isCreditAvailable()):
@@ -119,7 +120,8 @@ class Decider:
                                 masterChef.spendCredit()
 
                                 #FORCE MASTERCHEF TO CHANGE
-                                masterChef.forceMaster(MasterChef.SILO_FOLLOW)                                    
+                                masterChef.forceMaster(MasterChef.SILO_FOLLOW)
+                                masterChef.spendCredit()                                    
 
                             
                         else:
@@ -135,21 +137,9 @@ class Decider:
         
     @staticmethod
     def siloFollow(silo_detector:SiloDetector, frame, driver:Driver , masterChef:MasterChef):
-        driver.startSonicTransmission()
-        sonicThreshold = 20 #The distance which is the threshold for the ultrasound to activate
-        areaThreshold = 132000 #The distance which is the threshold for the silo to be considered near
+        driver.setRotSpeed(30)
+        areaThreshold = 85000 #The distance which is the threshold for the silo to be considered near
         silo_loc = silo_detector.getLocOptimalSilo(frame)
-
-
-
-        driver.readBuffer()
-
-        left_val = float(driver.data['l'])
-
-        right_val = float(driver.data['r'])
-
-        print(left_val,":",right_val)
-
 
         if (silo_loc[0]>0):
             
@@ -157,32 +147,16 @@ class Decider:
 
             print("Area ",silo_loc[2])
             #If silo size is greater than a certain threshold (aka it is close)
-            if(silo_loc[2]>areaThreshold):
-                print("SILO CLOSE ")
+            if(silo_loc[2]>areaThreshold and len(silo_detector.silos)==1):
+                print("SILO FOCUSING")
+                masterChef.poke(MasterChef.SILO_FOCUS)
+                print("POKING FOR SILO FOCUS")
                 # if we are near silo (ultrasonic calibration)
                 #If both Ultrasounds are close
-                '''if(left_val < sonicThreshold or right_val<sonicThreshold):
-
-                    #Bringing silo to the middle of the gripper (Todo, calibrate this)
-                    if(silo_loc[0]>200):
-                        print("Move Right")
-                        driver.moveRight()
-                    
-                    #Release
-                    else:
-                        print("Release")
-                        if (masterChef.getMode() == MasterChef.BALL_RELEASE):
-                            driver.triggerRelease()
-                            masterChef.forceMaster(MasterChef.BALL_FOLLOW)
-                        else:
-                            masterChef.poke(MasterChef.BALL_RELEASE)
-
-                        '''
-                
-                masterChef.forceMaster(MasterChef.BALL_RELEASE)
-
+                driver.stop()
             else:
-                print("SILO FAR")
+                print("SILO UNFOCUSING")
+                masterChef.demotivateMaster()
                 #if we are far from silo
                 if (loc_val == SiloDetector.CENTER):
                     print("Silo is in front")
@@ -200,6 +174,111 @@ class Decider:
         #If silo is not detected
         else:
             print("NO SILO FOUND")
+            masterChef.demotivateMaster()
             driver.rotAClock()
 
+    @staticmethod
+    def siloFocus(siloDetector: SiloDetector, frame, driver: Driver, masterChef: MasterChef):
+        driver.setRotSpeed(20)
+        driver.startInfraTransmission()
+        driver.readBuffer()
+
+        left_val, right_val = float(driver.data['l']), float(driver.data['r'])
+        print("SILO FOCUS MODE")
+        print(left_val,":",right_val)
+        silo_loc = siloDetector.getLocOptimalSilo(frame)
+
+        if (silo_loc[0]>0):
+            if(left_val==1 and right_val==1):
+                print("ALIGNED")
+                silo_loc = siloDetector.getLocOptimalSilo(frame)
+                #X cord
+                xcord = silo_loc[0]
+
+                #Final adjustments
+                if(xcord<90):
+                    driver.moveLeft()
+
+                elif(xcord>135):
+                    driver.moveRight()
+                
+                #Else drop the ball
+                else:
+                    driver.triggerRelease()
+                    masterChef.forceMaster(MasterChef.BALL_FOLLOW)
+                
+            
+        
+            #Elif only left is aligned
+            elif(left_val==1):
+                print("LEFT IS ALIGNED, ROTATING ANTICLOCKWISE")
+                driver.rotAClock()
+
+            elif(right_val==1):
+                print("RIGHT IS ALIGNED, ROTATING CLOCKWISE")
+                driver.rotClock()
+
+            #Go nearer to silo if the IRs are not triggered
+            else: 
+                loc_val = SiloDetector.classifyPresence(silo_loc[0],  silo_loc[1])
+
+                if (loc_val == SiloDetector.CENTER):
+                    print("Silo close and is in front")
+                    driver.moveForward()
+                elif (loc_val == SiloDetector.LEFT):
+                    print("Silo close is in left")
+                    driver.rotAClock()
+                elif (loc_val == SiloDetector.RIGHT):
+                    print("Silo close is in right")
+                    driver.rotClock()
+
+        #Revert back to silo follow mode by "POKING" it
+        else:
+            print("UNABLE TO FIND SILO IN SILO FOCUS MODE, REVERTING TO SILO FOLLOW MODE")
+            masterChef.poke(MasterChef.SILO_FOLLOW)
+
+
+        ''' #If both are aligned
+        if(left_val==1 and right_val==1):
+            print("ALIGNED")
+            silo_loc = siloDetector.getLocOptimalSilo(frame)
+
+            if(silo_loc[0] in range())
+            
+        
+        #Elif only left is aligned
+        elif(left_val==1):
+            print("LEFT IS ALIGNED, ROTATING ANTICLOCKWISE")
+            driver.rotAClock()
+
+        elif(right_val==1):
+            print("RIGHT IS ALIGNED, ROTATING CLOCKWISE")
+            driver.rotClock()
+
+        #Elif if neither is triggered silo is found
+        else: 
+            silo_loc = siloDetector.getLocOptimalSilo(frame)
+            
+            #IF silo is found,move towards it
+            if (silo_loc[0]>0):
+                loc_val = SiloDetector.classifyPresence(silo_loc[0],  silo_loc[1])
+
+                if (loc_val == SiloDetector.CENTER):
+                    print("Silo close and is in front")
+                    driver.moveForward()
+                elif (loc_val == SiloDetector.LEFT):
+                    print("Silo close is in left")
+                    driver.rotAClock()
+                elif (loc_val == SiloDetector.RIGHT):
+                    print("Silo close is in right")
+                    driver.rotClock()
+            
+            #Else if even silo cant be found
+            else:
+                print("UNABLE TO FIND SILO IN SILO FOCUS MODE, REVERTING TO SILO FOLLOW MODE")
+                masterChef.poke(MasterChef.SILO_FOLLOW)
+            '''
+
+
+        
         

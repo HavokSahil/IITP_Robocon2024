@@ -9,6 +9,7 @@ class Driver:
         self.clutch = False
         
         self.pastCommand = ""
+        self.pastSpeed = 20
         self.data = {'l':999,'r':999}
 
 
@@ -120,7 +121,7 @@ class Driver:
         self.clutch = value
 
     def clearBuffer(self):
-        self.data = self.serialObj.read_all()
+        garbage = self.serialObj.read_all()
     
 
     #Sends command to get ultrasound values
@@ -131,25 +132,31 @@ class Driver:
     def stopSonicTransmission(self):
         self.sendCommandToSerial("I")
 
+    def startInfraTransmission(self):
+        self.sendCommandToSerial("F")
+    
+    def stopInfraTransmission(self):
+        self.sendCommandToSerial("S")
 
     def readBuffer(self):
         #THe pattern to decipher
-        pattern = r'\{"l":\s*([0-9.]+),\s*"r":\s*([0-9.]+)\s*\}'
+        pattern = r'\{"l":\s*([0-9]+),\s*"r":\s*([0-9]+)\s*\}'
         matches = re.findall(pattern, str(self.serialObj.read_all().decode('utf-8')))
 
         if matches:
             # Get the last match
             last_match = matches[-1]
-            l_value = float(last_match[0])
-            r_value = float(last_match[1])
+            l_value = int(last_match[0])
+            r_value = int(last_match[1])
             self.data = {'l':l_value,'r':r_value}
         else:
-            print("No silo data found")
-            self.data = {'l':99999,'r':99999}
-            
+            print("No infrared data found")
+            print(self.data)
 
 
     #Set rotational speed
-    def setRotSpeed(self,value):
-        message = "<0{}>".format(value)
-        self.sendCommandToSerial(message)
+    def setRotSpeed(self,value:int):
+        if (value!=self.pastSpeed):
+            encoded_speed = chr(value)
+            self.sendCommandToSerial(encoded_speed)
+            self.pastSpeed = value

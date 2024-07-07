@@ -11,6 +11,9 @@ class MasterChef:
     BALL_FOCUS  = 0x2
     SILO_FOLLOW = 0x4
     BALL_RELEASE = 0x9
+    SILO_FOCUS = 0xA
+
+    TEST = 0xB
     
     CREDIT_ON = 0x5
     CREDIT_OFF = 0x6
@@ -33,11 +36,15 @@ class MasterChef:
         if (proposal == self.consider):
             self.condidence+=1
             if (self.condidence>=MasterChef.CONF_THRES):
+                self.condidence = 0
                 self.setMode(proposal)
                 self.earnCredit()
         else:
             self.consider = proposal
 
+
+    def demotivateMaster(self):
+        self.condidence = max(0, self.condidence - 1)
 
     #The ultimate tool to make the masterchef obey us
     def forceMaster(self, order):
