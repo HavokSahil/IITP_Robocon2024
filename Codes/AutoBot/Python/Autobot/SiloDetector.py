@@ -44,8 +44,8 @@ class SiloDetector(Detector):
         Identify the best silo
 
         Returns:
-            Tuple: (x, y) The coordinate of centre of the best silo.
-            (-1,-1) if no silo
+            Tuple: (x, y,area) The coordinate of centre of the best silo and it's area
+            (-1,-1,-1) if no silo
         """
         self.updateDetection(frame)
         #Reset silostate
@@ -108,7 +108,7 @@ class SiloDetector(Detector):
 
             self.silostate.append(new_silo)            
 
-            print(self.silostate)#For debugginh
+            print(self.silostate)#For debugging
 
 
         #Find the best silo
@@ -128,12 +128,12 @@ class SiloDetector(Detector):
             
             cx = (self.silos[silo_number][0]+self.silos[silo_number][2])/2
             cy = (self.silos[silo_number][1]+self.silos[silo_number][3])/2
-
-            return (cx,cy)
+            area = abs(self.silos[silo_number][0]-self.silos[silo_number][2])*abs((self.silos[silo_number][1]-self.silos[silo_number][3]))
+            return (cx,cy,area)
 
         else:
             self.best_silo = -1
-            return(-1,-1)
+            return(-1,-1,-1)
 
         
         

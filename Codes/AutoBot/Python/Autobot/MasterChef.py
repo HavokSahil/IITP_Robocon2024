@@ -10,6 +10,7 @@ class MasterChef:
     BALL_FOLLOW = 0x1
     BALL_FOCUS  = 0x2
     SILO_FOLLOW = 0x4
+    BALL_RELEASE = 0x9
     
     CREDIT_ON = 0x5
     CREDIT_OFF = 0x6

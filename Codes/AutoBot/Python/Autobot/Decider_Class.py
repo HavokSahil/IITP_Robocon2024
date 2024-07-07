@@ -131,13 +131,15 @@ class Decider:
                     case BallDetector.RIGHT:
                         driver.rotClock()
                         
-        
+    
         
     @staticmethod
     def siloFollow(silo_detector:SiloDetector, frame, driver:Driver , masterChef:MasterChef):
         driver.startSonicTransmission()
         sonicThreshold = 20 #The distance which is the threshold for the ultrasound to activate
+        areaThreshold = 132000 #The distance which is the threshold for the silo to be considered near
         silo_loc = silo_detector.getLocOptimalSilo(frame)
+
 
 
         driver.readBuffer()
@@ -153,31 +155,34 @@ class Decider:
             
             loc_val = SiloDetector.classifyPresence(silo_loc[0],  silo_loc[1])
 
-            # if we are near silo (ultrasonic calibration)
-            #If both Ultrasounds are close
-            if(left_val < sonicThreshold and right_val<sonicThreshold):
-                if(silo_loc[0]>200):
-                    print("Move Right")
-                    driver.moveRight()
-                else:
-                    print("Release")
-                    driver.triggerRelease()
-                    masterChef.forceMaster(MasterChef.BALL_FOLLOW)
+            print("Area ",silo_loc[2])
+            #If silo size is greater than a certain threshold (aka it is close)
+            if(silo_loc[2]>areaThreshold):
+                print("SILO CLOSE ")
+                # if we are near silo (ultrasonic calibration)
+                #If both Ultrasounds are close
+                '''if(left_val < sonicThreshold or right_val<sonicThreshold):
 
-            #Else if the left ultrasound is close and the right is far
-            elif(left_val<sonicThreshold):
+                    #Bringing silo to the middle of the gripper (Todo, calibrate this)
+                    if(silo_loc[0]>200):
+                        print("Move Right")
+                        driver.moveRight()
+                    
+                    #Release
+                    else:
+                        print("Release")
+                        if (masterChef.getMode() == MasterChef.BALL_RELEASE):
+                            driver.triggerRelease()
+                            masterChef.forceMaster(MasterChef.BALL_FOLLOW)
+                        else:
+                            masterChef.poke(MasterChef.BALL_RELEASE)
 
-                print("SILO ANCHORING USING LEFT")
-                #We rotate anticlockwise,using the left silo as an achor
-                driver.rotAClock()
-            #Else if the right ultrasound is close and left is far
-            elif(right_val<sonicThreshold):
-                print("SILO ANCHORING USING RIGHT")
-                driver.rotClock()
-            
-            #Else if the silo is far away
+                        '''
+                
+                masterChef.forceMaster(MasterChef.BALL_RELEASE)
 
             else:
+                print("SILO FAR")
                 #if we are far from silo
                 if (loc_val == SiloDetector.CENTER):
                     print("Silo is in front")
@@ -188,6 +193,8 @@ class Decider:
                 elif (loc_val == SiloDetector.RIGHT):
                     print("Silo is in right")
                     driver.rotClock()
+                
+                
 
 
         #If silo is not detected

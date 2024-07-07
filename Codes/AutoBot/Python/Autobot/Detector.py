@@ -45,8 +45,7 @@ class Detector:
         self.blue_balls = list()
 
     def updateDetection(self,frame):
-        #Reading from the frame
-    
+
 
         #Refresing predictions
         self.silos = list()
@@ -54,7 +53,7 @@ class Detector:
         self.blue_balls = list()
 
         #Now we create the result of our predictions
-        results = self._model.predict(frame, imgsz=640, conf=0.2, iou=0.45)
+        results = self._model.predict(frame, imgsz=640, conf=0.2, iou=0.45,verbose = False)
         results = results[0]
 
         #Now for every detected ball

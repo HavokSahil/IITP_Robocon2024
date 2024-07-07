@@ -50,6 +50,8 @@ class Driver:
                 self.serialObj.write(str(command).encode("utf-8"))
                 end = time.time()
                 self.pastCommand = command
+
+                print("sent char is ", command)
             
             except Exception as e:
                 raise Exception("Failed to send command via serial: " + str(e))
