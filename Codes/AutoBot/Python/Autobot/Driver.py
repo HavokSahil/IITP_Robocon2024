@@ -69,7 +69,14 @@ class Driver:
         if not self.clutch:
             self.sendCommandToSerial('s')
 
+    def moveBackLeft(self):
+        if not self.clutch:
+            self.sendCommandToSerial('z')
 
+    
+    def moveBackRight(self):
+        if not self.clutch:
+            self.sendCommandToSerial('c')
     # Control Functions
     def moveLeft(self):
         if not self.clutch:
