@@ -27,6 +27,11 @@ AutoBot myAutoBot(
   PWM_PIN_4, 
   DIR_PIN_4);
 
+
+double GRIPPER_SONIC_BUFFER[10];
+double LEFT_SONIC_BUFFER[10];
+double RIGHT_SONIC_BUFFER[10];
+
 void setup() {
   Serial.begin(BAUD_RATE);
   myAutoBot.setMotorSpeedCoefficients(1.6, 1, 1.6, 1);
@@ -39,45 +44,49 @@ void setup() {
   pinMode(PIN_PWM_LIFTER, OUTPUT);
   pinMode(PIN_TACTILE_UP, INPUT);
   pinMode(PIN_TACTILE_DOWN, INPUT);
+  pinMode(PIN_SONIC_LEFT_TRIG, OUTPUT);
+  pinMode(PIN_SONIC_RIGHT_TRIG, OUTPUT);
+  pinMode(PIN_SONIC_LEFT_ECHO, INPUT);
+  pinMode(PIN_SONIC_RIGHT_ECHO, INPUT);
+
+  digitalWrite(PIN_TACTILE_UP, LOW);
+
+
+  double a = myAutoBot.getUltraDist(PIN_SONIC_TRIG, PIN_SONIC_ECHO);
+  double b = myAutoBot.getUltraDist(PIN_SONIC_LEFT_TRIG, PIN_SONIC_LEFT_ECHO);
+  double c = myAutoBot.getUltraDist(PIN_SONIC_RIGHT_TRIG, PIN_SONIC_RIGHT_ECHO);
+
+  for (auto &x: GRIPPER_SONIC_BUFFER) x = a;
+  for (auto &x: LEFT_SONIC_BUFFER) x = b;
+  for (auto &x: RIGHT_SONIC_BUFFER) x = c;
 }
 
-int arToNum[3];
-int iter = 0;
-bool incomingNum = false;
-
-int getNum() {
-  int result = 0;
-  for (int i = 0; i < 3; i++) {
-        result = result * 10 + (arToNum[i] - '0');
-  }
-  return result;
-}
 
 void loop() {
   if (Serial.available()) {
     int ch = Serial.read();
-    if (incomingNum == false) {
-      if ((ch>=(int)'a') && (ch <= (int)'z')) {
-        myAutoBot.setDriveState((char)ch);
-      } else if ((ch >= (int)'A') && (ch <= (int)'Z')) {
+
+    if ((ch>=(int)'a') && (ch <= (int)'z')) {
+      myAutoBot.setDriveState((char)ch);
+
+    } else if ((ch >= (int)'A') && (ch <= (int)'Z')) {
+      if (ch == 'F')
+        myAutoBot.setBroadcast(true);
+      else if (ch == 'S')
+        myAutoBot.setBroadcast(false);
+      else
         myAutoBot.setPeriState((char)ch);
-      } else if (ch == (int)'<') {
-        incomingNum = true;
-        iter = 0;
-      }
-    } else {
-      arToNum[iter++] = ch;
-      if (ch == '>') {
-        incomingNum = false;
-        iter = 0;
-        int speed = getNum();
-        myAutoBot.setOperatingSpeed(speed);
-      }
+    } else if (ch != '\n') {
+      myAutoBot.setRotatingSpeed(ch);
     }
-    Serial.println(myAutoBot.OPERATING_SPEED);
   }
 
-  Serial.println(digitalRead(PIN_TACTILE_UP));
+  Serial.print("The Speed is ");
+  Serial.println(myAutoBot.ROTATING_SPEED);
+
+  int a = digitalRead(PIN_TACTILE_DOWN);
+  int b = digitalRead(PIN_TACTILE_UP);
+
   switch (myAutoBot.getDriveState()) {
     case BOT_FORWARD:
       myAutoBot.driveFRONT();
@@ -126,7 +135,11 @@ void loop() {
     
   }
 
+  if (myAutoBot.getBroadcast()) {
+    myAutoBot.getLateralProximityReading();
+  }
+
   myAutoBot.setPeriState(PERI_IDLE);
 
-  delay(100);
+  delay(150);
 }
