@@ -83,6 +83,12 @@ while True:
 
 
     match masterChef.getMode():
+        
+        #LINE FOLLOWING.... DO NOTHING EXCEPT WAIT FOR LINE FOLLOWING TO END
+        case MasterChef.LINE_FOLLOW:
+            print("LINE FOLLOW")
+            Decider.LineFollow(driver,masterChef)
+
 
         #Follow the ball
         case MasterChef.BALL_FOLLOW:

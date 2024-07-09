@@ -8,6 +8,19 @@ from threading import Thread
 
 
 class Decider:
+    #Line follow methof
+    @staticmethod
+    def LineFollow(driver:Driver,masterchef:MasterChef):
+        
+        #In case it has not started line following, send the command again
+        driver.startLineFollow()
+
+
+        #If line follow has ended
+        if(driver.shouldStartWinning()):
+            masterchef.forceMaster(MasterChef.BALL_FOLLOW)
+
+
     @staticmethod
     def ballFollow(close_ball_detector, far_ball_detector, close_frame, far_frame, driver, masterChef):
         
@@ -212,11 +225,11 @@ class Decider:
             #Elif only left is aligned
             elif(left_val==1):
                 print("LEFT IS ALIGNED, ROTATING ANTICLOCKWISE")
-                driver.rotAClock()
+                driver.moveForward()
 
             elif(right_val==1):
                 print("RIGHT IS ALIGNED, ROTATING CLOCKWISE")
-                driver.rotClock()
+                driver.moveForward()
 
             #Go nearer to silo if the IRs are not triggered
             else: 

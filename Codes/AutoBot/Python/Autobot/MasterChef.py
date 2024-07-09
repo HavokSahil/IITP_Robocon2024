@@ -21,6 +21,9 @@ class MasterChef:
     RED_MODE = 0x7
     BLUE_MODE = 0x8
 
+    #State for line following 
+    LINE_FOLLOW = 0xC
+
 
     #We are initializing duh..... Why are you even reading this comment
     def __init__(self, id, mode):

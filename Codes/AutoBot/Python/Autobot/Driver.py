@@ -57,6 +57,16 @@ class Driver:
             except Exception as e:
                 raise Exception("Failed to send command via serial: " + str(e))
 
+    #line follow
+    def startLineFollow(self):
+        self.sendCommandToSerial('[')
+
+    #Read a character
+    def shouldStartWinning(self):
+        return (']' in self.serialObj.read_all().decode('utf-8'))
+
+        
+
 
     # Control Functions
     def moveForward(self):
