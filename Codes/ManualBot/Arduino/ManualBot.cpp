@@ -35,10 +35,10 @@ ManualBot::~ManualBot() {
 }
 
 void ManualBot::drive(int x, int y) {
-  float speed = sqrt(pow(x, 2) + pow(y, 2));
+  float radius = sqrt(pow(x, 2) + pow(y, 2));
+  float mRadius = sqrt(pow(100.0, 2) + pow(100.0, 2));
   float angle = atan2(y, x);
-
-  speed = (speed/255)*operatingSpeed;
+  float speed = std::min((radius/mRadius)*operatingSpeed, (float)255);
 
   int motorSpeeds[4];
   motorSpeeds[0] = motorSpeedCoefficients[0] * (speed * -sin(angle)); // Front-left
@@ -48,22 +48,15 @@ void ManualBot::drive(int x, int y) {
   ManualBot::setWheelSpeeds(motorSpeeds);
 }
 
-void ManualBot::rotCLK(int factor) {
-  int motorSpeeds[4];
-  float speed = (speed/255.0)*operatingSpeed;
-  motorSpeeds[0] = motorSpeedCoefficients[0]*operatingSpeed*factor;
-  motorSpeeds[1] = motorSpeedCoefficients[1]*operatingSpeed*factor;
-  motorSpeeds[2] = motorSpeedCoefficients[2]*operatingSpeed*factor;
-  motorSpeeds[3] = motorSpeedCoefficients[3]*operatingSpeed*factor;
-  ManualBot::setWheelSpeeds(motorSpeeds);
-}
+void ManualBot::rotate(int factor) {
+  float fac = (float)factor/100.0;
+  float speed = std::min(operatingSpeed * fac, (float)255);
 
-void ManualBot::rotACLK(int factor) {
   int motorSpeeds[4];
-  motorSpeeds[0] = motorSpeedCoefficients[0]*-operatingSpeed*factor;
-  motorSpeeds[1] = motorSpeedCoefficients[1]*-operatingSpeed*factor;
-  motorSpeeds[2] = motorSpeedCoefficients[2]*-operatingSpeed*factor;
-  motorSpeeds[3] = motorSpeedCoefficients[3]*-operatingSpeed*factor;
+  motorSpeeds[0] = motorSpeedCoefficients[0]*speed*0;
+  motorSpeeds[1] = motorSpeedCoefficients[1]*speed;
+  motorSpeeds[2] = motorSpeedCoefficients[2]*speed*0;
+  motorSpeeds[3] = motorSpeedCoefficients[3]*speed;
   ManualBot::setWheelSpeeds(motorSpeeds);
 }
 
@@ -89,19 +82,35 @@ void ManualBot::setWheelSpeeds(int motorSpeeds[]) {
 }
 
 void ManualBot::driveFRONT() {
-  drive(0, 100);
+  drive(0, 20);
 }
 
 void ManualBot::driveLEFT() {
-  drive(-100, 0);
+  drive(-20, 0);
 }
 
 void ManualBot::driveRIGHT() {
-  drive(100, 0);
+  drive(20, 0);
 }
 
 void ManualBot::driveBACK() {
-  drive(0, -100);
+  drive(0, -20);
+}
+
+void ManualBot::rotClock() {
+  this->rotate(20);
+}
+
+void ManualBot::rotAClock() {
+  this->rotate(-20);
+}
+
+void ManualBot::setState(char state) {
+  this->state = state;
+}
+
+char ManualBot::getState() {
+  return this->state;
 }
 
 void ManualBot::setOperatingSpeed(int speed) {
@@ -112,18 +121,34 @@ void ManualBot::triggerShooting() {
   Serial2.write(TRIGGER_PNEUMATIC);
 }
 
-void ManualBot::triggerPICK(bool value) {
+void ManualBot::triggerPickLeft(bool value) {
+  if (value) {
+    Serial2.write(TRIGGER_GRAB_LEFT_POS);
+  } else {
+    Serial2.write(TRIGGER_GRAB_LEFT_NEG);
+  }
+}
+
+void ManualBot::triggerPickRight(bool value) {
+  if (value) {
+    Serial2.write(TRIGGER_GRAB_RIGHT_POS);
+  } else {
+    Serial2.write(TRIGGER_GRAB_RIGHT_NEG);
+  }
+}
+void ManualBot::triggerGrab(bool value) {
+  if (value) {
+    Serial2.write(TRIGGER_BALL_GRAB_POS);
+  } else {
+    Serial2.write(TRIGGER_BALL_GRAB_NEG);
+  }
+}
+
+void ManualBot::triggerLifter(bool value) {
   if (value) {
     Serial2.write(TRIGGER_UP);
   } else {
     Serial2.write(TRIGGER_DOWN);
-  }
-}
-void ManualBot::triggerGRAB(bool value) {
-  if (value) {
-    Serial2.write(TRIGGER_GRAB_POS);
-  } else {
-    Serial2.write(TRIGGER_GRAB_NEG);
   }
 }
 
@@ -136,8 +161,8 @@ void ManualBot::sendToArduino(const char *message) {
 }
 
 void ManualBot::setMotorSpeedCoefficients(float coeff1, float coeff2, float coeff3, float coeff4) {
-  motorSpeedCoefficients[0] = coeff1;
-  motorSpeedCoefficients[0] = coeff2;
-  motorSpeedCoefficients[0] = coeff3;
-  motorSpeedCoefficients[0] = coeff4;
+  this->motorSpeedCoefficients[0] = coeff1;
+  this->motorSpeedCoefficients[1] = coeff2;
+  this->motorSpeedCoefficients[2] = coeff3;
+  this->motorSpeedCoefficients[3] = coeff4;
 }

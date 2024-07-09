@@ -4,15 +4,15 @@
 #include <AsyncWebSocket.h>
 #include <ArduinoJson.h>
 
-#define DRIVE_PWM_1 22
-#define DRIVE_PWM_2 12
-#define DRIVE_PWM_3 19
-#define DRIVE_PWM_4 14
+#define DRIVE_PWM_1 14
+#define DRIVE_PWM_2 22
+#define DRIVE_PWM_3 12
+#define DRIVE_PWM_4 19
 
-#define DRIVE_DIR_1 23
-#define DRIVE_DIR_2 13
-#define DRIVE_DIR_3 21
-#define DRIVE_DIR_4 18
+#define DRIVE_DIR_1 18
+#define DRIVE_DIR_2 23
+#define DRIVE_DIR_3 27
+#define DRIVE_DIR_4 21
 
 #define RX_ARDUINO_COMM 16
 #define TX_ARDUINO_COMM 17
@@ -22,20 +22,14 @@
 
 int pos_JOYSTICK_X = 0;
 int pos_JOYSTICK_Y = 0;
-float pos_ROTSTICK_y = 0;
+int pos_ROTSTICK_X = 0;
 
 ManualBot myManualBot(DRIVE_PWM_1, DRIVE_DIR_1, DRIVE_PWM_2, DRIVE_DIR_2, DRIVE_PWM_3, DRIVE_DIR_3, DRIVE_PWM_4, DRIVE_DIR_4, RX_ARDUINO_COMM, TX_ARDUINO_COMM);
 AsyncWebServer server(80);
-AsyncWebSocket ws("/ws");
+AsyncWebSocket ws("/");
 
-const char *ssid = "7.0 GHz";
-const char *password = "havoksahil";
-
-// initial value for trigger button states
-String val1 = "false";
-String val2 = "false";
-String val3 = "false";\
-String val4 = "false";
+const char *ssid = "Ayush";
+const char *password = "AAAYUSHH";
 
 void setup() {
   Serial.begin(BAUD_RATE);
@@ -52,17 +46,35 @@ void setup() {
   server.addHandler(&ws);
   server.begin();
   myManualBot.setOperatingSpeed(100);
-  myManualBot.setMotorSpeedCoefficients(1, 1, 1, 1);
+  myManualBot.setMotorSpeedCoefficients(1, 1, 1, 1.8);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  myManualBot.drive(pos_JOYSTICK_X, pos_JOYSTICK_Y);
-  // Serial.println(pos_ROTSTICK_y);
-  if (pos_ROTSTICK_y>0) {
-    myManualBot.rotCLK(pos_ROTSTICK_y);
-  } else if (pos_ROTSTICK_y<0) {
-    myManualBot.rotACLK(pos_ROTSTICK_y);
+  Serial.println(WiFi.localIP());
+  Serial.println(myManualBot.getState());
+
+  if (myManualBot.getState() == 'x') {
+    if (pos_ROTSTICK_X == 0) {
+      myManualBot.drive(pos_JOYSTICK_X, pos_JOYSTICK_Y);
+    }
+    else {
+      myManualBot.rotate(pos_ROTSTICK_X);
+    }
+  } else {
+    if (myManualBot.getState() == 'w')
+      myManualBot.driveFRONT();
+    else if (myManualBot.getState() == 'a')
+      myManualBot.driveLEFT();
+    else if (myManualBot.getState() == 'z')
+      myManualBot.driveRIGHT();
+    else if (myManualBot.getState() == 'q')
+      myManualBot.driveBACK();
+    else if (myManualBot.getState() == '>')
+      myManualBot.rotClock();
+    else if (myManualBot.getState() == '<')
+      myManualBot.rotAClock();
+    else myManualBot.setState('x');
   }
 }
 
@@ -106,43 +118,69 @@ void handleWebSocketData(AsyncWebSocketClient *client, uint8_t *data, size_t len
         pos_JOYSTICK_Y = jsonDocument["y"];
       }
   if (jsonDocument.containsKey("type") && jsonDocument["type"]=="RTJ")
-    if (jsonDocument.containsKey("y")) {
-        int _ = jsonDocument["y"];
-        pos_ROTSTICK_y = (float)_/1000.0;
+    if (jsonDocument.containsKey("x")) {
+        int _ = jsonDocument["x"];
+        pos_ROTSTICK_X = _;
     } 
   if (jsonDocument.containsKey("type") && (jsonDocument["type"]=="BSTS")) {
-    if (jsonDocument.containsKey("grab") && jsonDocument.containsKey("arm1") && jsonDocument.containsKey("shoot") && jsonDocument.containsKey("stop")) {
-      // presently not connected
-      String grab = jsonDocument["grab"];
-      String arm = jsonDocument["arm1"];
-      String shoot = jsonDocument["shoot"];
-      String stop = jsonDocument["stop"];
-      
-      if (shoot!=val3) {
-        myManualBot.triggerShooting();
-      }
-      else if (grab!=val1) {
-        val1 = grab;
-        if (val1=="true") {
-          myManualBot.triggerGRAB(true);
-        } else {
-          myManualBot.triggerGRAB(false);
-        }
-      }
-      else if (arm!=val2) {
-        val2 = arm;
-        if (val2 == "true") {
-          myManualBot.triggerPICK(true);
-        } else {
-          myManualBot.triggerPICK(false);
-        }
-      }
-      else if (stop!=val4) {
-        val4 = stop;
-        if (val4 == "true") {
-          myManualBot.triggerStop();
-        }
-      }
-    };
+    if (jsonDocument["action"]==TRIGGER_UP) {
+      myManualBot.triggerLifter(true);
+    }
+    else if (jsonDocument["action"] == TRIGGER_DOWN) {
+      myManualBot.triggerLifter(false);
+    } 
+    else if (jsonDocument["action"] == TRIGGER_STOP) {
+      myManualBot.triggerStop();
+    }
+    else if (jsonDocument["action"] == TRIGGER_PNEUMATIC) {
+      myManualBot.triggerShooting();
+    }
+    else if (jsonDocument["action"] == TRIGGER_GRAB_LEFT_POS) {
+      myManualBot.triggerPickLeft(true);
+    }
+    else if (jsonDocument["action"] == TRIGGER_GRAB_LEFT_NEG) {
+      myManualBot.triggerPickLeft(false);
+    }
+    else if (jsonDocument["action"] == TRIGGER_GRAB_RIGHT_POS) {
+      myManualBot.triggerPickRight(true);
+    }
+    else if (jsonDocument["action"] == TRIGGER_GRAB_RIGHT_NEG) {
+      myManualBot.triggerPickRight(false);
+    }
+    else if (jsonDocument["action"] == TRIGGER_BALL_GRAB_POS) {
+      myManualBot.triggerGrab(true);
+    }
+    else if (jsonDocument["action"] == TRIGGER_BALL_GRAB_NEG) {
+      myManualBot.triggerGrab(false);
+    } 
+    else if (jsonDocument["action"] == BOT_FORWARD) {
+      myManualBot.setState('w');
+    }
+    else if (jsonDocument["action"] == BOT_LEFT) {
+      myManualBot.setState('a');
+    }
+    else if (jsonDocument["action"] == BOT_RIGHT) {
+      myManualBot.setState('z');
+    }
+    else if (jsonDocument["action"] == BOT_BACKWARD) {
+      myManualBot.setState('q');
+    }
+    else if (jsonDocument["action"] == BOT_CLOCK) {
+      myManualBot.setState('>');
+    }
+    else if (jsonDocument["action"] == BOT_ANTI_CLOCK) {
+      myManualBot.setState('<');
+    }
+    else if (jsonDocument["action"] == BOT_IDLE) {
+      myManualBot.setState('x');
+    }
+    else if (jsonDocument["action"] == ALTER_SPEED_COEFF) {
+      float c1 = jsonDocument["c1"];
+      float c2 = jsonDocument["c2"];
+      float c3 = jsonDocument["c3"];
+      float c4 = jsonDocument["c4"];
+
+      myManualBot.setMotorSpeedCoefficients(c1, c2, c3, c4);
+    }
   }
 }

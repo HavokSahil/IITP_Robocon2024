@@ -4,12 +4,25 @@
 #include <Arduino.h>
 
 #define BAUD_RATE 115200
-#define TRIGGER_UP 'u'
-#define TRIGGER_DOWN 'd'
-#define TRIGGER_STOP 'e'
-#define TRIGGER_PNEUMATIC 'r'
-#define TRIGGER_GRAB_POS 'g'
-#define TRIGGER_GRAB_NEG 'l'
+#define TRIGGER_UP "u"
+#define TRIGGER_DOWN "d"
+#define TRIGGER_STOP "e"
+#define TRIGGER_PNEUMATIC "r"
+#define TRIGGER_STOP "e"
+#define TRIGGER_GRAB_LEFT_POS "g"
+#define TRIGGER_GRAB_LEFT_NEG "l"
+#define TRIGGER_GRAB_RIGHT_POS "h"
+#define TRIGGER_GRAB_RIGHT_NEG "k"
+#define TRIGGER_BALL_GRAB_POS "p"
+#define TRIGGER_BALL_GRAB_NEG "o"
+#define ALTER_SPEED_COEFF "asc"
+#define BOT_FORWARD "w"
+#define BOT_BACKWARD "q"
+#define BOT_LEFT "a"
+#define BOT_RIGHT "z"
+#define BOT_CLOCK ">"
+#define BOT_ANTI_CLOCK "<"
+#define BOT_IDLE "x"
 
 class ManualBot {
   public:
@@ -24,15 +37,20 @@ class ManualBot {
   void driveLEFT();
   void driveRIGHT();
   void driveBACK();
-  void rotCLK(int factor);
-  void rotACLK(int factor);
+  void rotClock();
+  void rotAClock();
+  void setState(char);
+  char getState();
+  void rotate(int factor);
   void setWheelSpeeds(int motorSpeeds[]);
 
   // methods for transmission agent
   void sendToArduino(const char *message);
   void triggerShooting();
-  void triggerPICK(bool);
-  void triggerGRAB(bool);
+  void triggerLifter(bool);
+  void triggerPickLeft(bool);
+  void triggerPickRight(bool);
+  void triggerGrab(bool);
   void triggerStop();
   
   private:
@@ -42,6 +60,7 @@ class ManualBot {
     float motorSpeedCoefficients[4];
     int operatingSpeed;
 
+    char state;
     // properties of transmission agent
     int serialPins[2]; // [tx, rx]
 };
