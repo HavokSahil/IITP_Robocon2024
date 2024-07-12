@@ -149,6 +149,19 @@ class Driver:
     def stopSonicTransmission(self):
         self.sendCommandToSerial("I")
 
+
+    # Function to verify if ball is caught or not; Caught: True, Not-Caught: False
+    def verifyBallCapture(self):
+        pattern = r'\{\s*"c"\s*:\s*1\s*\}'
+        matches = re.findall(pattern, str(self.serialObj.read_all().decode('utf-8')))
+
+        if matches:
+            last_match = matches[-1]
+            conf = int(last_match[0])
+            if (conf == 1):
+                return True
+        return False
+        
     def startInfraTransmission(self):
         self.sendCommandToSerial("F")
     
@@ -169,7 +182,6 @@ class Driver:
         else:
             print("No infrared data found")
             print(self.data)
-
 
     #Set rotational speed
     def setRotSpeed(self,value:int):
