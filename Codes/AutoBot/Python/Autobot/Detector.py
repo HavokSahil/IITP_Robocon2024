@@ -22,7 +22,7 @@ class Detector:
     #Initializing 
     def __init__(self, filename, imgsz=640, conf=0.45, iou=0.45, xCenter=320, yCenter=480):
         #Creating a model
-        self._model = YOLO(filename,verbose=False)
+        self._model = YOLO(filename,verbose=True)
         #Getting class names if it is required later
         self.class_names = self._model.names
 

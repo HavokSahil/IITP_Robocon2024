@@ -13,20 +13,25 @@ start_load = time.time()
 contrast = 0
 brightness = 0
 
+
 #Create a driver object
 driver = Driver()
 driver.initialiseSerial("COM6",9600)
 
-masterChef = MasterChef("suvrayan", MasterChef.BALL_FOLLOW)
+masterChef = MasterChef("suvrayan", MasterChef.LINE_FOLLOW)
 
 
-model_path = "C:/Users/Suvra/OneDrive/Documents/IIT Patna/Robocon/Codes/Auto Bot/IITP_Robocon2024/Codes/AutoBot/python/Resource/really_big_model.pt"
+model_path = "C:/Users/Suvra/OneDrive/Documents/IIT Patna/Robocon/Codes/Auto Bot/IITP_Robocon2024/Codes/AutoBot/python/Resource/final.pt"
+
+#TEAM
+team = 1
+
 #Create a ball for the close camera for ball find mode
-close_ball_detector = BallDetector(model_path,640,0.45,0.45,320,480,1)
+close_ball_detector = BallDetector(model_path,640,0.45,0.45,320,480,team)
 #Create a ball detector for the far camera for ball find mode
-far_ball_detector = BallDetector(model_path,640,0.45,0.45,320,480,1)
+far_ball_detector = BallDetector(model_path,640,0.45,0.45,320,480,team)
 #And a silo detector for silo search mode
-far_silo_detector = SiloDetector(model_path,640,0.45,0.45,320,480,1)
+far_silo_detector = SiloDetector(model_path,640,0.45,0.45,320,480,team)
 
 #The laptop camera is the far camera
 far_cap = cv2.VideoCapture(0)
@@ -134,9 +139,8 @@ while True:
         
         #FOR DEBUGGING ONLY
         case MasterChef.TEST:
-            driver.setRotSpeed(30)
-            driver.rotClock()
-            driver.clearBuffer()
+            far_ball_detector.updateDetection(close_frame)
+            far_ball_detector.highlightFrame(close_frame)
 
     #Show the windows
     cv2.imshow("CLOSE",close_frame)    

@@ -218,17 +218,18 @@ class Decider:
                 #Else drop the ball
                 else:
                     driver.triggerRelease()
+                    #driver.stopInfraTransmission()#CHECK THIS
                     masterChef.forceMaster(MasterChef.BALL_FOLLOW)
                 
             
         
             #Elif only left is aligned
             elif(left_val==1):
-                print("LEFT IS ALIGNED, ROTATING ANTICLOCKWISE")
+                print("LEFT IS ALIGNED, ALIGNING RIGHT")
                 driver.moveForward()
 
             elif(right_val==1):
-                print("RIGHT IS ALIGNED, ROTATING CLOCKWISE")
+                print("RIGHT IS ALIGNED, ALIGNING LEFT")
                 driver.moveForward()
 
             #Go nearer to silo if the IRs are not triggered
@@ -249,6 +250,8 @@ class Decider:
         else:
             print("UNABLE TO FIND SILO IN SILO FOCUS MODE, REVERTING TO SILO FOLLOW MODE")
             masterChef.poke(MasterChef.SILO_FOLLOW)
+
+
 
 
         ''' #If both are aligned
