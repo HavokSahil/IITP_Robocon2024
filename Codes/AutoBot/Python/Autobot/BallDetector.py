@@ -52,13 +52,36 @@ class BallDetector(Detector):
 
             closest = [-1,-1,-1,-1]
             #Find the largest ball (using area) and return that
-            for i in balls:
-                new_area = abs(i[0]-i[2])*abs(i[1]-i[3])
+            for ball in balls:
+                #Check if ball in silo for every silo
+
+                insilo = False
+
+
+                #TEST THIS
+
+                for silo in self.silos:
+                    centre_x = (ball[0]+ball[2])//2
+                    centre_y = (ball[1]+ball[3])//2
                 
-                #Find the ball with the largest area
-                if(new_area>area):
-                    closest = i
-                    area = new_area
+                    #Getting the silo centre
+                    x1 = silo[0]
+                    y1 = silo[1]
+                    x2 = silo[2]
+                    y2 = silo[3]
+
+
+                    #If ball is in the silo
+                    if(centre_x>x1 and centre_x<x2 and centre_y>y1 and centre_y<y2):
+                        insilo = True
+                        
+                if(insilo == False):
+                    new_area = abs(ball[0]-ball[2])*abs(ball[1]-ball[3])
+                    
+                    #Find the ball with the largest area
+                    if(new_area>area):
+                        closest = ball
+                        area = new_area
                 
             #Find new centres
             centre_x = (closest[0]+closest[2])/2
